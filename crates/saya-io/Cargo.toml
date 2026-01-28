@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = { workspace = true }
+arboard = "3.6.1"
+futures-util = "0.3.31"
+tokio = { workspace = true }
+tokio-tungstenite = "0.28.0"
