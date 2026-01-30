@@ -7,8 +7,11 @@ anyhow = "1.0.100"
 clap = { version = "4.5.55", features = ["derive"] }
 dotenvy = "0.15.7"
 uuid = { version = "1.20.0", features = ["serde", "v4"] }
+unicode-normalization = "0.1.25"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt", "json"] }
 tokio = { version = "1.49.0", features = ["full"] }
+tokio-util = "0.7.18"
+tokio_util_watchdog = { version = "0.2.0", default-features = false }
 serde = { version = "1.0.228", features = ["derive"] }
-unicode-normalization = "0.1.25"
+kanal = "0.1"

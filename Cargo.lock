@@ -327,6 +327,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92ecc6618181def0457392ccd0ee51198e065e016d1d527a7ac1b6dc7c1f09d2"
 
 [[package]]
+name = "kanal"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e3953adf0cd667798b396c2fa13552d6d9b3269d7dd1154c4c416442d1ff574"
+dependencies = [
+ "futures-core",
+ "lock_api",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.180"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -630,8 +640,12 @@ name = "saya-app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "kanal",
  "saya-config",
+ "saya-core",
  "tokio",
+ "tokio-util",
+ "tokio_util_watchdog",
  "tracing",
 ]
 
@@ -646,7 +660,6 @@ dependencies = [
 name = "saya-core"
 version = "0.1.0"
 dependencies = [
- "serde",
  "unicode-normalization",
 ]
 
@@ -852,6 +865,29 @@ dependencies = [
  "log",
  "tokio",
  "tungstenite",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio_util_watchdog"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b92f572147f24449fbb95501030aaaf62373d810bde3210a2b8ec3cfeb89adcd"
+dependencies = [
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

@@ -6,5 +6,9 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
+tokio_util_watchdog = { workspace = true }
 tracing = { workspace = true }
+kanal = { workspace = true }
+saya-core = { path = "../saya-core/" }
 saya-config = { path = "../saya-config/" }

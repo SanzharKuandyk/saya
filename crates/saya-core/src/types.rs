@@ -1,10 +1,12 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum AppEvent {
     ConfigChanged,
     UiEvent(UiEvent),
+    ApiRequest(ApiRequest),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum UiEvent {}
+
+#[derive(Debug)]
+pub enum ApiRequest {}
