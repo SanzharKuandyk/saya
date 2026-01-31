@@ -10,5 +10,15 @@ tokio-util = { workspace = true }
 tokio_util_watchdog = { workspace = true }
 tracing = { workspace = true }
 kanal = { workspace = true }
+windows = { version = "0.54", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_DataExchange",
+] }
 saya-core = { path = "../saya-core/" }
 saya-config = { path = "../saya-config/" }
+saya-ui = { path = "../saya-ui/" }
+saya-io = { path = "../saya-io/" }
+saya-ocr = { path = "../saya-ocr/" }
+saya-anki = { path = "../saya-anki/" }
+saya-lang-japanese = { path = "../../languages/japanese/" }

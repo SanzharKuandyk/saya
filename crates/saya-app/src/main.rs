@@ -20,11 +20,16 @@ use self::state::AppState;
 
 #[tokio::main]
 async fn main() {
-    let _watchdog = Watchdog::builder()
-        .watchdog_timeout(Duration::from_secs(10))
-        .build();
-
     let state = Arc::new(AppState::new());
+
+    let watchdog_timeout = {
+        let config = state.config.read().await;
+        config.watchdog_timeout_ms
+    };
+
+    let _watchdog = Watchdog::builder()
+        .watchdog_timeout(Duration::from_millis(watchdog_timeout))
+        .build();
 
     let shutdown = async {
         signal::ctrl_c().await.expect("failed to listen for ctrl+c");
@@ -39,6 +44,8 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let (app_to_ui_tx, app_to_ui_rx) = kanal::bounded_async::<AppEvent>(1);
     let (ui_to_app_tx, ui_to_app_rx) = kanal::unbounded_async::<AppEvent>();
 
+    let event_tx = ui_to_app_tx.clone();
+
     let event_loop = spawn_with_cancel(
         "event_loop",
         cancel.clone(),
@@ -48,7 +55,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let ui = spawn_with_cancel(
         "ui_loop",
         cancel.clone(),
-        ui_loop(state.clone(), app_to_ui_rx, ui_to_app_tx),
+        ui_loop(state.clone(), app_to_ui_rx, event_tx.clone()),
     );
 
     let watcher = {
@@ -59,7 +66,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
                 let cfg = state.config.read().await;
                 Duration::from_millis(cfg.delta_time)
             };
-            watcher_io(state, delta_time, cancel_child).await
+            watcher_io(state, delta_time, cancel_child, event_tx).await
         })
     };
 

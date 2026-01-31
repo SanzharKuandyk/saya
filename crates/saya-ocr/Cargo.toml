@@ -1,0 +1,17 @@
+[package]
+name = "saya-ocr"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+windows = { version = "0.54", features = [
+    "Foundation",
+    "Storage_Streams",
+    "Graphics_Imaging",
+    "Media_Ocr",
+    "Globalization",
+] }
+screenshots = "0.8"
+global-hotkey = "0.6"
+image = "0.24"

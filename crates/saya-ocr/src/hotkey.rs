@@ -1,0 +1,70 @@
+use anyhow::{Context, Result};
+use global_hotkey::{
+    hotkey::{Code, HotKey, Modifiers},
+    GlobalHotKeyEvent, GlobalHotKeyManager,
+};
+
+pub struct HotkeyManager {
+    manager: GlobalHotKeyManager,
+    hotkey: HotKey,
+}
+
+impl HotkeyManager {
+    /// Create a new hotkey manager with Ctrl+Shift+S
+    pub fn new() -> Result<Self> {
+        let manager = GlobalHotKeyManager::new().context("Failed to create hotkey manager")?;
+
+        let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyS);
+
+        manager
+            .register(hotkey)
+            .context("Failed to register hotkey")?;
+
+        Ok(Self { manager, hotkey })
+    }
+
+    /// Create with custom hotkey
+    pub fn with_hotkey(modifiers: Modifiers, code: Code) -> Result<Self> {
+        let manager = GlobalHotKeyManager::new().context("Failed to create hotkey manager")?;
+
+        let hotkey = HotKey::new(Some(modifiers), code);
+
+        manager
+            .register(hotkey)
+            .context("Failed to register hotkey")?;
+
+        Ok(Self { manager, hotkey })
+    }
+
+    /// Check if hotkey was pressed (non-blocking)
+    pub fn poll(&self) -> bool {
+        let receiver = GlobalHotKeyEvent::receiver();
+        if let Ok(event) = receiver.try_recv() {
+            event.id == self.hotkey.id()
+        } else {
+            false
+        }
+    }
+
+    /// Wait for hotkey press (blocking)
+    pub fn wait(&self) -> Result<()> {
+        let receiver = GlobalHotKeyEvent::receiver();
+        loop {
+            let event = receiver.recv().context("Failed to receive event")?;
+            if event.id == self.hotkey.id() {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Get the hotkey ID for matching events
+    pub fn id(&self) -> u32 {
+        self.hotkey.id()
+    }
+}
+
+impl Drop for HotkeyManager {
+    fn drop(&mut self) {
+        let _ = self.manager.unregister(self.hotkey);
+    }
+}
