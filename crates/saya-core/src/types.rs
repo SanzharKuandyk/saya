@@ -4,11 +4,33 @@ pub enum AppEvent {
     UiEvent(UiEvent),
     ApiRequest(ApiRequest),
     TextInput(String),
+    RawTextInput {
+        text: String,
+        source: TextSource,
+    },
     ShowResults(Vec<DisplayResult>),
     CreateCard(DisplayResult),
-    TriggerOcr { x: i32, y: i32, width: u32, height: u32 },
-    CaptureWindow { window_id: Option<u32> },
-    OcrStatusUpdate { status: String, capturing: bool },
+    TriggerOcr {
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+    },
+    CaptureWindow {
+        window_id: Option<u32>,
+    },
+    OcrStatusUpdate {
+        status: String,
+        capturing: bool,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum TextSource {
+    Ocr,
+    Clipboard,
+    Websocket,
+    Manual,
 }
 
 #[derive(Debug, Clone)]
