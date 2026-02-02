@@ -154,13 +154,6 @@ async fn handle_events(
                             })
                             .await;
 
-                        let _ = app_to_ui_tx
-                            .send(AppEvent::OcrStatusUpdate {
-                                status: "Processing...".to_string(),
-                                capturing: false,
-                            })
-                            .await;
-
                         // Dictionary processing
                         let normalized = processor.normalize(&text);
                         let tokens = processor.tokenize(&normalized);
@@ -263,13 +256,6 @@ async fn handle_events(
                             .send(AppEvent::RawTextInput {
                                 text: text.clone(),
                                 source: TextSource::Ocr,
-                            })
-                            .await;
-
-                        let _ = app_to_ui_tx
-                            .send(AppEvent::OcrStatusUpdate {
-                                status: "Processing...".to_string(),
-                                capturing: false,
                             })
                             .await;
 
