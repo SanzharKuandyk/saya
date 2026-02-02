@@ -14,8 +14,8 @@ export component OcrWindow inherits Window {
     in-out property <[string]> window-list: [];
     in-out property <int> selected-window-index: -1;
 
-    preferred-width: 400px;
-    preferred-height: 340px;
+    preferred-width: 300px;
+    preferred-height: 250px;
 
     background: #1e1e1e66;
 
@@ -23,42 +23,22 @@ export component OcrWindow inherits Window {
         padding: 8px;
         spacing: 8px;
 
-        // Window selector
+        // Minimal control bar at top
         Rectangle {
-            height: 50px;
-            background: #2d2d2ddd;
+            height: 32px;
+            background: #00000088;
             border-radius: 4px;
 
             HorizontalBox {
-                padding: 10px;
-                spacing: 10px;
+                padding: 6px;
+                alignment: center;
 
                 Text {
-                    text: "Window:";
-                    color: #ffffff;
+                    text: status;
+                    color: is-capturing ? #ffaa00 : #00ff00;
                     vertical-alignment: center;
-                    font-size: 14px;
-                }
-
-                Rectangle {
-                    background: #3d3d3d;
-                    border-radius: 4px;
-                    horizontal-stretch: 1;
-
-                    ComboBox {
-                        width: 100%;
-                        height: 100%;
-                        model: window-list;
-                        current-index <=> selected-window-index;
-                        selected(value) => {
-                            root.window-selected(self.current-index);
-                        }
-                    }
-                }
-
-                Button {
-                    text: "Refresh";
-                    clicked => { root.refresh-windows(); }
+                    font-size: 11px;
+                    font-weight: 600;
                 }
             }
         }
@@ -71,31 +51,12 @@ export component OcrWindow inherits Window {
             border-radius: 4px;
         }
 
-        // Control bar
-        Rectangle {
-            height: 50px;
-            background: #2d2d2dcc;
-            border-radius: 4px;
-
-            HorizontalBox {
-                padding: 8px;
-                spacing: 12px;
-
-                Button {
-                    text: !is-ready ? "Loading..." : is-capturing ? "Capturing..." : "Capture";
-                    enabled: is-ready && !is-capturing;
-                    clicked => {
-                        root.capture-clicked();
-                    }
-                }
-
-                Text {
-                    text: status;
-                    color: is-capturing ? #ffaa00 : #00ff00;
-                    vertical-alignment: center;
-                    font-size: 12px;
-                    font-weight: 600;
-                }
+        // Simple capture button at bottom
+        Button {
+            text: !is-ready ? "..." : is-capturing ? "..." : "Capture";
+            enabled: is-ready && !is-capturing;
+            clicked => {
+                root.capture-clicked();
             }
         }
     }

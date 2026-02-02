@@ -120,9 +120,9 @@ fn run_slint_ui(
                 let pos = win.window().position();
                 let size = win.window().size();
 
-                // Calculate green zone (exclude top controls 108px + bottom 66px)
-                let controls_top = 108;
-                let controls_height = 108 + 66;
+                // Calculate green zone (exclude top 32px + bottom button ~36px)
+                let controls_top = 40;
+                let controls_height = 40 + 40;
                 let green_height = size.height.saturating_sub(controls_height);
 
                 let selected_idx = win.get_selected_window_index();
@@ -232,7 +232,11 @@ fn run_slint_ui(
                                 TextSource::Websocket => "WebSocket",
                                 TextSource::Manual => "Manual",
                             };
-                            tracing::debug!("[SLINT] Hooked text from {}: {} chars", source_str, text.len());
+                            tracing::debug!(
+                                "[SLINT] Hooked text from {}: {} chars",
+                                source_str,
+                                text.len()
+                            );
                             w.set_hooked_text(text.into());
                             w.set_text_source(source_str.into());
                             w.show().ok();
