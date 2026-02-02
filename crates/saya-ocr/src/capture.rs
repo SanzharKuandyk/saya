@@ -9,6 +9,7 @@ pub struct CaptureRegion {
     pub height: u32,
 }
 
+#[allow(dead_code)]
 pub struct RawImage {
     pub data: Vec<u8>,
     pub width: u32,
@@ -59,6 +60,7 @@ pub fn capture_primary_screen() -> Result<Vec<u8>> {
 }
 
 /// Capture primary screen as raw RGBA
+#[allow(dead_code)]
 pub fn capture_primary_screen_raw() -> Result<RawImage> {
     let monitors = Monitor::all().context("Failed to get monitors")?;
     let monitor = monitors.first().context("No monitor found")?;

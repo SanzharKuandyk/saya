@@ -10,11 +10,11 @@ pub struct HotkeyManager {
 }
 
 impl HotkeyManager {
-    /// Create a new hotkey manager with Ctrl+Shift+S
+    /// Create a new hotkey manager with Ctrl+Shift+J
     pub fn new() -> Result<Self> {
         let manager = GlobalHotKeyManager::new().context("Failed to create hotkey manager")?;
 
-        let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyS);
+        let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyJ);
 
         manager
             .register(hotkey)
@@ -55,9 +55,9 @@ impl HotkeyManager {
         if let Ok(event) = receiver.try_recv() {
             let is_match = event.id == self.hotkey.id();
             if is_match {
-                println!("Hotkey event matched! ID: {:?}", event.id);
+                tracing::debug!("Hotkey event matched! ID: {:?}", event.id);
             } else {
-                println!("Hotkey event but wrong ID. Got: {:?}, Expected: {:?}", event.id, self.hotkey.id());
+                tracing::debug!("Hotkey event but wrong ID. Got: {:?}, Expected: {:?}", event.id, self.hotkey.id());
             }
             is_match
         } else {

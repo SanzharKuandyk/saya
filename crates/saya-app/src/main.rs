@@ -28,7 +28,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("debug"))
         )
         .with_writer(std::io::stdout)
         .with_ansi(atty::is(atty::Stream::Stdout))
@@ -56,6 +56,7 @@ async fn main() {
 }
 
 pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
+    tracing::info!("Application starting");
     let cancel = CancellationToken::new();
 
     let (app_to_ui_tx, app_to_ui_rx) = kanal::unbounded_async::<AppEvent>();
@@ -66,7 +67,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let event_loop = spawn_with_cancel(
         "event_loop",
         cancel.clone(),
-        event_loop(state.clone(), ui_to_app_rx, app_to_ui_tx),
+        event_loop(state.clone(), ui_to_app_rx, app_to_ui_tx.clone()),
     );
 
     let ui = spawn_with_cancel(
@@ -83,7 +84,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
                 let cfg = state.config.read().await;
                 Duration::from_millis(cfg.delta_time)
             };
-            watcher_io(state, delta_time, cancel_child, event_tx).await
+            watcher_io(state, delta_time, cancel_child, app_to_ui_tx).await
         })
     };
 

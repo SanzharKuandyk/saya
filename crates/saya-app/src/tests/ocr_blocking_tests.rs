@@ -37,7 +37,7 @@ async fn test_parallel_spawn_blocking() {
     let r2 = timeout(Duration::from_secs(2), h2).await.unwrap().unwrap();
 
     let elapsed = start.elapsed();
-    println!("Parallel spawn_blocking took: {:?}", elapsed);
+    tracing::debug!("Parallel spawn_blocking took: {:?}", elapsed);
     assert!(elapsed < Duration::from_millis(200), "Too slow: {:?}", elapsed);
     assert_eq!(r1, "one");
     assert_eq!(r2, "two");
@@ -120,7 +120,7 @@ async fn test_worker_threads() {
     for h in handles {
         timeout(Duration::from_secs(1), h).await.unwrap().unwrap();
     }
-    println!("All 4 spawn_blocking tasks completed");
+    tracing::debug!("All 4 spawn_blocking tasks completed");
 }
 
 /// Test 8: Check if multiple tasks can run spawn_blocking concurrently
@@ -144,7 +144,7 @@ async fn test_concurrent_blocking() {
     }
 
     let count = counter.load(Ordering::SeqCst);
-    println!("Ran {} tasks in parallel", count);
+    tracing::debug!("Ran {} tasks in parallel", count);
     assert_eq!(count, 8);
 }
 
@@ -170,7 +170,7 @@ async fn test_pipeline() {
 
     let final_result = timeout(Duration::from_secs(1), event_loop).await.unwrap().unwrap();
     assert_eq!(final_result, "ocr_result");
-    println!("Pipeline test passed!");
+    tracing::debug!("Pipeline test passed!");
 }
 
 /// Test 10: REAL OCR - Measure actual performance
@@ -186,30 +186,30 @@ async fn test_real_ocr_performance() {
     let start = std::time::Instant::now();
 
     let result = tokio::task::spawn_blocking(move || {
-        println!("[OCR TEST] Starting capture...");
+        tracing::debug!("[OCR TEST] Starting capture...");
         let capture_start = std::time::Instant::now();
         let image_data = capture_screen_region(region).expect("Capture failed");
         let capture_time = capture_start.elapsed();
-        println!("[OCR TEST] Capture took: {:?}", capture_time);
+        tracing::debug!("[OCR TEST] Capture took: {:?}", capture_time);
 
-        println!("[OCR TEST] Starting OCR...");
+        tracing::debug!("[OCR TEST] Starting OCR...");
         let ocr_start = std::time::Instant::now();
         let text = recognize_sync(&image_data, "ja").expect("OCR failed");
         let ocr_time = ocr_start.elapsed();
-        println!("[OCR TEST] OCR took: {:?}", ocr_time);
+        tracing::debug!("[OCR TEST] OCR took: {:?}", ocr_time);
 
         text
     }).await;
 
     let total = start.elapsed();
-    println!("[OCR TEST] Total: {:?}", total);
+    tracing::debug!("[OCR TEST] Total: {:?}", total);
 
     match result {
         Ok(text) => {
-            println!("[OCR TEST] Result: '{}' ({} chars)", text, text.len());
+            tracing::debug!("[OCR TEST] Result: '{}' ({} chars)", text, text.len());
         }
         Err(e) => {
-            println!("[OCR TEST] Failed: {}", e);
+            tracing::debug!("[OCR TEST] Failed: {}", e);
         }
     }
 
@@ -232,7 +232,7 @@ async fn test_app_event_flow_simulation() {
         while let Ok(event) = rx.recv().await {
             match event {
                 AppEvent::TextInput(text) => {
-                    println!("[APP FLOW] Received TextInput: {} chars", text.len());
+                    tracing::debug!("[APP FLOW] Received TextInput: {} chars", text.len());
                     event_count_clone.fetch_add(1, Ordering::SeqCst);
                 }
                 _ => {}
@@ -259,11 +259,11 @@ async fn test_app_event_flow_simulation() {
 
             match result {
                 Ok(text) => {
-                    println!("[APP FLOW] Sending TextInput {}...", i + 1);
+                    tracing::debug!("[APP FLOW] Sending TextInput {}...", i + 1);
                     tx.send(AppEvent::TextInput(text)).await.expect("Send failed");
                 }
                 Err(e) => {
-                    println!("[APP FLOW] OCR failed: {}", e);
+                    tracing::debug!("[APP FLOW] OCR failed: {}", e);
                 }
             }
         }
@@ -275,9 +275,9 @@ async fn test_app_event_flow_simulation() {
     let _ = timeout(Duration::from_secs(1), event_loop).await.unwrap();
 
     let count = event_count.load(Ordering::SeqCst);
-    println!("[APP FLOW] Received {} events", count);
+    tracing::debug!("[APP FLOW] Received {} events", count);
     assert_eq!(count, 3, "Should have received 3 events");
-    println!("[APP FLOW] Test passed!");
+    tracing::debug!("[APP FLOW] Test passed!");
 }
 
 /// Test 12: Check if slint::spawn_local equivalent works
@@ -297,7 +297,7 @@ async fn test_spawn_local_simulation() {
             // This is what slint::spawn_local does
             let tx_clone = tx.clone();
             let _ = tokio::spawn(async move {
-                println!("[SPAWN_LOCAL] Sending event {}", i + 1);
+                tracing::debug!("[SPAWN_LOCAL] Sending event {}", i + 1);
                 tx_clone.send(AppEvent::TextInput(format!("test_{}", i))).await.ok();
             }).await;
 
@@ -311,7 +311,7 @@ async fn test_spawn_local_simulation() {
         while let Ok(event) = rx.recv().await {
             match event {
                 AppEvent::TextInput(text) => {
-                    println!("[SPAWN_LOCAL] Received: {}", text);
+                    tracing::debug!("[SPAWN_LOCAL] Received: {}", text);
                     received_clone.fetch_add(1, Ordering::SeqCst);
                 }
                 _ => {}
@@ -323,6 +323,6 @@ async fn test_spawn_local_simulation() {
     let _ = timeout(Duration::from_secs(1), event_loop).await.unwrap();
 
     let count = received.load(Ordering::SeqCst);
-    println!("[SPAWN_LOCAL] Received {} events", count);
+    tracing::debug!("[SPAWN_LOCAL] Received {} events", count);
     // Should receive all 3 events
 }

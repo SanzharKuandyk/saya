@@ -14,7 +14,7 @@ pub mod network;
 pub mod ocr;
 pub mod ui;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct Config {
     pub network: NetworkConfig,
     pub ui: UiConfig,

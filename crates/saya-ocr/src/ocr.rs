@@ -1,15 +1,15 @@
 use anyhow::{Context, Result};
 use windows::{
-    core::HSTRING,
     Globalization::Language,
     Graphics::Imaging::{BitmapAlphaMode, BitmapDecoder, BitmapPixelFormat},
     Media::Ocr::OcrEngine as WinOcrEngine,
     Storage::Streams::{DataWriter, InMemoryRandomAccessStream},
+    core::HSTRING,
 };
 
 /// Perform OCR on PNG/BMP image bytes
 pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String> {
-    println!(
+    tracing::debug!(
         ">>> [OCR] recognize_sync: {} bytes, lang={}",
         image_bytes.len(),
         language_code
@@ -26,7 +26,7 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
         )
     })?;
 
-    println!(">>> [OCR] Engine created");
+    tracing::debug!(">>> [OCR] Engine created");
 
     // Load image into memory stream
     let stream = InMemoryRandomAccessStream::new()?;
@@ -36,7 +36,7 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
     writer.FlushAsync()?.get()?;
     stream.Seek(0)?;
 
-    println!(">>> [OCR] Image loaded to stream");
+    tracing::debug!(">>> [OCR] Image loaded to stream");
 
     // Decode image
     let decoder = BitmapDecoder::CreateAsync(&stream)?.get()?;
@@ -46,7 +46,7 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
         .GetSoftwareBitmapConvertedAsync(BitmapPixelFormat::Bgra8, BitmapAlphaMode::Premultiplied)?
         .get()?;
 
-    println!(
+    tracing::debug!(
         ">>> [OCR] Bitmap: {}x{}",
         bitmap.PixelWidth()?,
         bitmap.PixelHeight()?
@@ -56,7 +56,7 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
     let result = engine.RecognizeAsync(&bitmap)?.get()?;
     let text = result.Text()?.to_string();
 
-    println!(">>> [OCR] Result: '{}' ({} chars)", text, text.len());
+    tracing::debug!(">>> [OCR] Result: '{}' ({} chars)", text, text.len());
 
     Ok(text)
 }

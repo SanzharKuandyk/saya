@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use kanal::{AsyncReceiver, AsyncSender};
+use kanal::{AsyncReceiver, AsyncSender, Receiver, Sender};
 use saya_core::state::AppState;
 use saya_core::types::{AppEvent, DisplayResult, UiEvent};
 
@@ -11,18 +11,65 @@ pub async fn ui_loop(
     app_to_ui_rx: AsyncReceiver<AppEvent>,
     ui_to_app_tx: AsyncSender<AppEvent>,
 ) -> anyhow::Result<()> {
-    // Create the overlay window
+    tracing::info!("UI loop starting");
+
+    let (sync_tx, sync_rx) = kanal::unbounded::<AppEvent>();
+    let (app_sync_tx, app_sync_rx) = kanal::unbounded::<AppEvent>();
+
+    let ui_thread = std::thread::spawn(move || run_slint_ui(sync_tx, app_sync_rx));
+
+    let forward_to_ui = tokio::spawn({
+        async move {
+            tracing::info!("[UI] Starting app->ui forwarder");
+            while let Ok(event) = app_to_ui_rx.recv().await {
+                tracing::debug!(
+                    "[UI] Forwarding app->ui: {:?}",
+                    std::mem::discriminant(&event)
+                );
+                if app_sync_tx.send(event).is_err() {
+                    break;
+                }
+            }
+        }
+    });
+
+    tracing::info!("[UI] Forwarding events from UI to app");
+    while let Ok(event) = sync_rx.as_async().recv().await {
+        tracing::info!(
+            "[UI] Forwarding ui->app: {:?}",
+            std::mem::discriminant(&event)
+        );
+        if let Err(e) = ui_to_app_tx.send(event).await {
+            tracing::error!("[UI] Failed to forward event: {}", e);
+            break;
+        }
+    }
+
+    forward_to_ui.abort();
+    if let Err(e) = ui_thread.join() {
+        tracing::error!("[UI] UI thread panicked: {:?}", e);
+    }
+
+    tracing::info!("UI loop exiting");
+    Ok(())
+}
+
+fn run_slint_ui(
+    ui_to_app_tx: Sender<AppEvent>,
+    app_to_ui_rx: Receiver<AppEvent>,
+) -> anyhow::Result<()> {
+    tracing::info!("[SLINT] UI thread starting");
+
     let window = OverlayWindow::new()?;
     let window_weak = window.as_weak();
 
-    // Create OCR window
     let ocr_window = OcrWindow::new()?;
     let ocr_window_weak = ocr_window.as_weak();
 
-    // Store window IDs for selection
+    tracing::debug!("[SLINT] UI windows created");
+
     let window_ids = std::rc::Rc::new(std::cell::RefCell::new(Vec::<u32>::new()));
 
-    // Set up refresh windows callback
     {
         let ocr_weak = ocr_window.as_weak();
         let ids = window_ids.clone();
@@ -48,87 +95,107 @@ pub async fn ui_loop(
         });
     }
 
-    // Set up window selection callback
     {
         let ids = window_ids.clone();
         ocr_window.on_window_selected(move |idx| {
             let ids = ids.borrow();
             if let Some(id) = ids.get(idx as usize) {
-                println!(">>> Selected window ID: {} <<<", id);
+                tracing::debug!("[SLINT] Selected window ID: {}", id);
             }
         });
     }
 
-    // Set up OCR capture callback
     {
         let tx = ui_to_app_tx.clone();
-        let ids = window_ids.clone();
-        ocr_window.on_capture_clicked(move || {
-            println!(">>> OCR BUTTON CLICKED <<<");
-            let tx = tx.clone();
-            let ids = ids.clone();
+        let ocr_weak = ocr_window.as_weak();
 
-            if let Some(win) = ocr_window_weak.upgrade() {
+        ocr_window.on_capture_clicked(move || {
+            tracing::debug!("[SLINT] OCR capture button clicked");
+
+            if let Some(win) = ocr_weak.upgrade() {
                 win.set_is_capturing(true);
                 win.set_status("Capturing...".into());
 
-                let selected_idx = win.get_selected_window_index();
-                let window_id = if selected_idx >= 0 {
-                    ids.borrow().get(selected_idx as usize).copied()
-                } else {
-                    None
-                };
+                let pos = win.window().position();
+                let size = win.window().size();
 
-                slint::spawn_local(async move {
-                    println!(">>> Sending capture event, window_id: {:?} <<<", window_id);
-                    let _ = tx.send(AppEvent::CaptureWindow { window_id }).await;
-                }).unwrap();
+                tracing::info!(
+                    "[SLINT] OCR window: {}x{} at ({}, {})",
+                    size.width,
+                    size.height,
+                    pos.x,
+                    pos.y
+                );
+
+                match tx.send(AppEvent::TriggerOcr {
+                    x: pos.x,
+                    y: pos.y,
+                    width: size.width,
+                    height: size.height,
+                }) {
+                    Ok(_) => tracing::info!("[SLINT] TriggerOcr sent successfully"),
+                    Err(e) => tracing::error!("[SLINT] Failed to send: {}", e),
+                }
             }
         });
     }
 
-    // Show OCR window
     ocr_window.show()?;
+    tracing::debug!("[SLINT] OCR window shown");
 
-    // Store current results for Anki card creation
-    let results_store = std::rc::Rc::new(std::cell::RefCell::new(Vec::<DisplayResult>::new()));
+    let results_store = Arc::new(std::sync::Mutex::new(Vec::<DisplayResult>::new()));
 
-    // Set up add-to-anki callback
     {
         let results_clone = results_store.clone();
         let tx = ui_to_app_tx.clone();
         window.on_add_to_anki(move |idx| {
-            let results = results_clone.borrow();
+            let results = results_clone.lock().unwrap();
             if let Some(result) = results.get(idx as usize) {
                 let result = result.clone();
-                let tx = tx.clone();
-                slint::spawn_local(async move {
-                    let _ = tx.send(AppEvent::CreateCard(result)).await;
-                })
-                .unwrap();
+                if let Err(e) = tx.send(AppEvent::CreateCard(result)) {
+                    tracing::error!("[SLINT] Failed to send CreateCard: {}", e);
+                }
             }
         });
     }
 
-    // Spawn a task to receive events from the app
     {
-        slint::spawn_local(async move {
-            while let Ok(event) = app_to_ui_rx.recv().await {
-                if let Some(window) = window_weak.upgrade() {
-                    match event {
-                        AppEvent::UiEvent(UiEvent::Show) => {
-                            window.show().ok();
+        let window_weak = window_weak.clone();
+        let ocr_weak = ocr_window_weak.clone();
+        let results_store = results_store.clone();
+
+        std::thread::spawn(move || {
+            tracing::info!("[SLINT-RX] Event receiver thread started");
+            while let Ok(event) = app_to_ui_rx.recv() {
+                tracing::debug!("[SLINT-RX] Received: {:?}", std::mem::discriminant(&event));
+
+                let window_weak = window_weak.clone();
+                let ocr_weak = ocr_weak.clone();
+                let results_store = results_store.clone();
+
+                let _ = slint::invoke_from_event_loop(move || match event {
+                    AppEvent::UiEvent(UiEvent::Show) => {
+                        if let Some(w) = window_weak.upgrade() {
+                            let _ = w.show();
+                            tracing::debug!("[SLINT] Overlay shown");
                         }
-                        AppEvent::UiEvent(UiEvent::Hide) => {
-                            window.hide().ok();
+                    }
+                    AppEvent::UiEvent(UiEvent::Hide) => {
+                        if let Some(w) = window_weak.upgrade() {
+                            let _ = w.hide();
+                            tracing::debug!("[SLINT] Overlay hidden");
                         }
-                        AppEvent::UiEvent(UiEvent::Close) => {
-                            window.hide().ok();
-                            break;
+                    }
+                    AppEvent::UiEvent(UiEvent::Close) => {
+                        if let Some(w) = window_weak.upgrade() {
+                            let _ = w.hide();
                         }
-                        AppEvent::ShowResults(results) => {
-                            // Store results for Anki card creation
-                            *results_store.borrow_mut() = results.clone();
+                        slint::quit_event_loop().ok();
+                    }
+                    AppEvent::ShowResults(results) => {
+                        if let Some(w) = window_weak.upgrade() {
+                            tracing::debug!("[SLINT] Showing {} results", results.len());
+                            *results_store.lock().unwrap() = results.clone();
 
                             let slint_results: Vec<DictResult> = results
                                 .into_iter()
@@ -144,23 +211,33 @@ pub async fn ui_loop(
                                 .collect();
 
                             let model = std::rc::Rc::new(slint::VecModel::from(slint_results));
-                            window.set_results(model.into());
+                            w.set_results(model.into());
+                            w.show().ok();
                         }
-                        _ => {}
                     }
-                } else {
-                    break;
-                }
+                    AppEvent::OcrStatusUpdate { status, capturing } => {
+                        if let Some(w) = ocr_weak.upgrade() {
+                            tracing::debug!(
+                                "[SLINT] OCR status: {} (capturing: {})",
+                                status,
+                                capturing
+                            );
+                            w.set_status(status.into());
+                            w.set_is_capturing(capturing);
+                        }
+                    }
+                    _ => {}
+                });
             }
-        })
-        .unwrap();
+            tracing::info!("[SLINT-RX] Event receiver thread stopped");
+        });
     }
 
-    // Show the window
     window.show()?;
+    tracing::info!("[SLINT] Running event loop");
 
-    // Run the Slint event loop
-    window.run()?;
+    slint::run_event_loop()?;
 
+    tracing::info!("[SLINT] Event loop exited");
     Ok(())
 }

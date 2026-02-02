@@ -4530,6 +4530,7 @@ dependencies = [
  "saya-ocr",
  "slint",
  "slint-build",
+ "tokio",
  "tracing",
 ]
 
