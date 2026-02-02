@@ -7,7 +7,9 @@ edition = "2024"
 slint = "1.14.1"
 kanal.workspace = true
 anyhow.workspace = true
+tracing.workspace = true
 saya-core = { path = "../saya-core" }
+saya-ocr = { path = "../saya-ocr" }
 
 [build-dependencies]
 slint-build = "1.14.1"

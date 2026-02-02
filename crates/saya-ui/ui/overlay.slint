@@ -4,10 +4,14 @@ export struct DictResult {
     term: string,
     reading: string,
     definition: string,
+    frequency: string,
+    pitch_accent: string,
+    jlpt_level: string,
+    conjugation: string,
 }
 
 export component OverlayWindow inherits Window {
-    title: "Saya";
+    title: "Saya - Dictionary";
     always-on-top: true;
 
     in-out property <[DictResult]> results: [];
@@ -53,6 +57,37 @@ export component OverlayWindow inherits Window {
                             text: result.reading;
                             font-size: 14px;
                             color: #a0a0a0;
+                        }
+
+                        // Metadata row (frequency, pitch, JLPT)
+                        if result.frequency != "" || result.pitch_accent != "" || result.jlpt_level != "": HorizontalBox {
+                            spacing: 8px;
+
+                            if result.frequency != "": Text {
+                                text: result.frequency;
+                                font-size: 12px;
+                                color: #ffd700;
+                            }
+
+                            if result.pitch_accent != "": Text {
+                                text: result.pitch_accent;
+                                font-size: 12px;
+                                color: #87ceeb;
+                            }
+
+                            if result.jlpt_level != "": Text {
+                                text: result.jlpt_level;
+                                font-size: 12px;
+                                color: #98fb98;
+                            }
+                        }
+
+                        // Conjugation info
+                        if result.conjugation != "": Text {
+                            text: result.conjugation;
+                            font-size: 11px;
+                            color: #b0b0b0;
+                            font-italic: true;
                         }
 
                         Text {

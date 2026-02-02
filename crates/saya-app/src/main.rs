@@ -6,11 +6,15 @@ use saya_core::types::AppEvent;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
 use tokio_util_watchdog::Watchdog;
+use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod events;
 pub mod io;
 pub mod state;
 pub mod ui;
+
+#[cfg(test)]
+mod tests;
 
 use events::event_loop;
 use io::watcher_io;
@@ -18,8 +22,21 @@ use ui::ui_loop;
 
 use self::state::AppState;
 
-#[tokio::main]
+#[tokio::main(worker_threads = 4)]
 async fn main() {
+    // Initialize tracing subscriber for console logging
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+        )
+        .with_writer(std::io::stdout)
+        .with_ansi(atty::is(atty::Stream::Stdout))
+        .finish()
+        .init();
+
+    tracing::info!("Saya starting...");
+
     let state = Arc::new(AppState::new());
 
     let watchdog_timeout = {
@@ -41,7 +58,7 @@ async fn main() {
 pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let cancel = CancellationToken::new();
 
-    let (app_to_ui_tx, app_to_ui_rx) = kanal::bounded_async::<AppEvent>(1);
+    let (app_to_ui_tx, app_to_ui_rx) = kanal::unbounded_async::<AppEvent>();
     let (ui_to_app_tx, ui_to_app_rx) = kanal::unbounded_async::<AppEvent>();
 
     let event_tx = ui_to_app_tx.clone();
@@ -71,10 +88,20 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     };
 
     tokio::select! {
-        _ = shutdown => tracing::info!("Shutdown requested"),
-        _ = event_loop => tracing::warn!("event_loop exited"),
-        _ = ui => tracing::warn!("ui_loop exited"),
-        _ = watcher => tracing::warn!("watcher exited"),
+        _ = shutdown => {
+            tracing::info!("Shutdown requested (Ctrl+C)");
+            cancel.cancel();
+        }
+        _ = event_loop => {
+            tracing::warn!("event_loop exited unexpectedly");
+            cancel.cancel();
+        }
+        _ = ui => {
+            tracing::warn!("UI exited - continuing without UI");
+        }
+        _ = watcher => {
+            tracing::warn!("watcher exited - continuing without watcher");
+        }
     }
 
     cancel.cancel();

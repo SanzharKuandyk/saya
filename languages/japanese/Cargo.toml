@@ -6,4 +6,6 @@ edition = "2024"
 [dependencies]
 saya-core = { path = "../../crates/saya-core" }
 unicode-normalization = { version = "0.1" }
+serde = { workspace = true }
 serde_json = { workspace = true }
+tracing = { workspace = true }

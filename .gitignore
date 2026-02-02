@@ -1,1 +1,5 @@
 /target
+
+languages/*/data/
+
+test_*.png
