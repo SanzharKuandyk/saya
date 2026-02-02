@@ -103,7 +103,7 @@ async fn test_event_loop_with_kanal() {
     }
     drop(tx);
 
-    timeout(Duration::from_secs(1), event_loop).await.unwrap();
+    let _ = timeout(Duration::from_secs(1), event_loop).await.unwrap();
     let guard = received.lock().unwrap();
     assert_eq!(guard.len(), 5);
 }

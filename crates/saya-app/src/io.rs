@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use kanal::AsyncSender;
-use saya_core::types::AppEvent;
+use saya_core::types::{AppEvent, TextSource};
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;
@@ -105,6 +105,10 @@ pub async fn watcher_io(
                                 tracing::debug!(">>> [OCR] Captured {} bytes, got text ({} chars)", bytes, text.len());
 
                                 if !text.trim().is_empty() {
+                                    let _ = tx.send(AppEvent::RawTextInput {
+                                        text: text.clone(),
+                                        source: TextSource::Ocr,
+                                    }).await;
                                     tracing::debug!(">>> [OCR] Sending TextInput event...");
                                     match tx.send(AppEvent::TextInput(text)).await {
                                         Ok(_) => tracing::debug!(">>> [OCR] TextInput sent!"),
@@ -148,6 +152,10 @@ pub async fn watcher_io(
         saya_io::ws::start_ws_listener(&ws_url, move |text| {
             let tx = event_tx.clone();
             tokio::spawn(async move {
+                let _ = tx.send(AppEvent::RawTextInput {
+                    text: text.clone(),
+                    source: TextSource::Websocket,
+                }).await;
                 let _ = tx.send(AppEvent::TextInput(text)).await;
             });
         })
@@ -160,6 +168,10 @@ pub async fn watcher_io(
             result = saya_io::clipboard::watch_clipboard(move |text| {
                 let tx = tx.clone();
                 tokio::spawn(async move {
+                    let _ = tx.send(AppEvent::RawTextInput {
+                        text: text.clone(),
+                        source: TextSource::Clipboard,
+                    }).await;
                     let _ = tx.send(AppEvent::TextInput(text)).await;
                 });
             }) => {

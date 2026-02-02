@@ -11,20 +11,66 @@ export struct DictResult {
 }
 
 export component OverlayWindow inherits Window {
-    title: "Saya - Dictionary";
+    title: "Saya";
     always-on-top: true;
 
     in-out property <[DictResult]> results: [];
+    in-out property <string> hooked-text: "";
+    in-out property <string> text-source: "";
     callback add-to-anki(int);
 
     preferred-width: 600px;
-    preferred-height: 400px;
+    preferred-height: 500px;
 
     background: #1e1e1ee6;
 
     VerticalBox {
         padding: 16px;
+        spacing: 12px;
 
+        // Top block: hooked text display
+        if hooked-text != "": Rectangle {
+            background: #2a2a2a;
+            border-radius: 8px;
+            min-height: 60px;
+            max-height: 120px;
+
+            VerticalBox {
+                padding: 12px;
+                spacing: 6px;
+
+                HorizontalBox {
+                    spacing: 8px;
+
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: text-source == "OCR" ? #ff6b6b :
+                                   text-source == "Clipboard" ? #4ecdc4 :
+                                   text-source == "WebSocket" ? #a29bfe :
+                                   #95a5a6;
+                    }
+
+                    Text {
+                        text: text-source;
+                        font-size: 11px;
+                        color: #808080;
+                        font-weight: 600;
+                    }
+                }
+
+                Text {
+                    text: hooked-text;
+                    font-size: 18px;
+                    color: #ffffff;
+                    wrap: word-wrap;
+                    overflow: elide;
+                }
+            }
+        }
+
+        // Bottom block: dictionary results
         ScrollView {
             VerticalBox {
                 spacing: 8px;

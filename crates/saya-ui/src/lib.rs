@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kanal::{AsyncReceiver, AsyncSender, Receiver, Sender};
 use saya_core::state::AppState;
-use saya_core::types::{AppEvent, DisplayResult, UiEvent};
+use saya_core::types::{AppEvent, DisplayResult, TextSource, UiEvent};
 
 slint::include_modules!();
 
@@ -191,6 +191,20 @@ fn run_slint_ui(
                             let _ = w.hide();
                         }
                         slint::quit_event_loop().ok();
+                    }
+                    AppEvent::RawTextInput { text, source } => {
+                        if let Some(w) = window_weak.upgrade() {
+                            let source_str = match source {
+                                TextSource::Ocr => "OCR",
+                                TextSource::Clipboard => "Clipboard",
+                                TextSource::Websocket => "WebSocket",
+                                TextSource::Manual => "Manual",
+                            };
+                            tracing::debug!("[SLINT] Hooked text from {}: {} chars", source_str, text.len());
+                            w.set_hooked_text(text.into());
+                            w.set_text_source(source_str.into());
+                            w.show().ok();
+                        }
                     }
                     AppEvent::ShowResults(results) => {
                         if let Some(w) = window_weak.upgrade() {
