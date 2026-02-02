@@ -15,6 +15,14 @@ pub async fn watcher_io(
 ) -> anyhow::Result<()> {
     tracing::info!("watcher_io started");
 
+    // Signal backend ready after brief initialization delay
+    let ready_tx = event_tx.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        let _ = ready_tx.send(AppEvent::BackendReady).await;
+        tracing::info!("Backend ready signal sent");
+    });
+
     let (listen_to_ws, ocr_enabled, ocr_language, ocr_region, target_window) = {
         let config = state.config.read().await;
         (

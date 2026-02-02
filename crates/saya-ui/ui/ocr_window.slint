@@ -8,8 +8,9 @@ export component OcrWindow inherits Window {
     callback refresh-windows();
     callback window-selected(int);
 
-    in-out property <string> status: "Ready";
+    in-out property <string> status: "Initializing...";
     in-out property <bool> is-capturing: false;
+    in-out property <bool> is-ready: false;
     in-out property <[string]> window-list: [];
     in-out property <int> selected-window-index: -1;
 
@@ -62,29 +63,12 @@ export component OcrWindow inherits Window {
             }
         }
 
-        // Capture region indicator
+        // Capture region indicator (empty green box)
         Rectangle {
             background: #00ff0022;
             border-color: #00ff00;
             border-width: 3px;
             border-radius: 4px;
-
-            VerticalBox {
-                alignment: center;
-
-                Text {
-                    text: selected-window-index >= 0 ? "Window capture mode" : "Full screen mode";
-                    color: #00ff00;
-                    font-size: 16px;
-                    font-weight: 700;
-                }
-
-                Text {
-                    text: "Press F9 or click Capture";
-                    color: #ffffff;
-                    font-size: 14px;
-                }
-            }
         }
 
         // Control bar
@@ -98,8 +82,8 @@ export component OcrWindow inherits Window {
                 spacing: 12px;
 
                 Button {
-                    text: is-capturing ? "Capturing..." : "Capture";
-                    enabled: !is-capturing;
+                    text: !is-ready ? "Loading..." : is-capturing ? "Capturing..." : "Capture";
+                    enabled: is-ready && !is-capturing;
                     clicked => {
                         root.capture-clicked();
                     }

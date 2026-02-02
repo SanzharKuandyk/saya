@@ -172,9 +172,17 @@ async fn handle_events(
                                 })
                                 .await;
 
-                            // Then process as before for dictionary lookup
+                            // Then process for dictionary lookup
                             match app_to_ui_tx.send(AppEvent::TextInput(text)).await {
-                                Ok(_) => tracing::debug!(">>> [OCR] TextInput sent!"),
+                                Ok(_) => {
+                                    tracing::debug!(">>> [OCR] TextInput sent");
+                                    let _ = app_to_ui_tx
+                                        .send(AppEvent::OcrStatusUpdate {
+                                            status: "Processing...".to_string(),
+                                            capturing: false,
+                                        })
+                                        .await;
+                                }
                                 Err(e) => tracing::debug!(">>> [OCR] Send failed: {}", e),
                             }
                         } else {
@@ -205,108 +213,114 @@ async fn handle_events(
         AppEvent::CaptureWindow { window_id } => {
             tracing::debug!(">>> [OCR] CaptureWindow: {:?} <<<", window_id);
 
-            let state = state.clone();
-            let app_to_ui_tx = app_to_ui_tx.clone();
+            let ocr_language = {
+                let config = state.config.read().await;
+                config.ocr.language.clone()
+            };
 
-            tokio::spawn(async move {
-                // Get OCR language from config
-                let ocr_language = {
-                    let config = state.config.read().await;
-                    config.ocr.language.clone()
+            let result = tokio::task::spawn_blocking(move || {
+                unsafe {
+                    windows::Win32::System::Com::CoInitializeEx(
+                        Some(std::ptr::null()),
+                        windows::Win32::System::Com::COINIT_MULTITHREADED,
+                    )
+                }
+                .ok()?;
+
+                let image_data = if let Some(id) = window_id {
+                    tracing::debug!(">>> [OCR] Capturing window {}", id);
+                    saya_ocr::capture_window(id)?
+                } else {
+                    tracing::debug!(">>> [OCR] Capturing primary screen");
+                    saya_ocr::capture_primary_screen()?
                 };
 
-                // Get region from config or use default
-                let region = {
-                    let config = state.config.read().await;
-                    config
-                        .ocr
-                        .capture_region
-                        .map(|r| saya_ocr::CaptureRegion {
-                            x: r.x,
-                            y: r.y,
-                            width: r.width,
-                            height: r.height,
-                        })
-                        .or(Some(saya_ocr::CaptureRegion {
-                            x: 100,
-                            y: 100,
-                            width: 600,
-                            height: 400,
-                        }))
-                };
+                tracing::debug!(">>> [OCR] Captured {} bytes", image_data.len());
+                let text = saya_ocr::recognize_sync(&image_data, &ocr_language)?;
+                Ok::<_, anyhow::Error>(text)
+            })
+            .await;
 
-                let Some(region) = region else {
-                    let _ = app_to_ui_tx
-                        .send(AppEvent::OcrStatusUpdate {
-                            status: "No capture region configured".to_string(),
-                            capturing: false,
-                        })
-                        .await;
-                    return;
-                };
+            match result {
+                Ok(Ok(text)) => {
+                    tracing::debug!(">>> [OCR] Got text: {} chars", text.len());
 
-                tracing::debug!(
-                    ">>> [OCR] Capturing region: {}x{} at ({},{})",
-                    region.width,
-                    region.height,
-                    region.x,
-                    region.y
-                );
+                    if !text.trim().is_empty() {
+                        // Show raw text in UI
+                        let _ = app_to_ui_tx
+                            .send(AppEvent::RawTextInput {
+                                text: text.clone(),
+                                source: TextSource::Ocr,
+                            })
+                            .await;
 
-                // Run capture and OCR in blocking context
-                let result = tokio::task::spawn_blocking(move || {
-                    // Initialize COM for this thread (required for OCR)
-                    unsafe {
-                        windows::Win32::System::Com::CoInitializeEx(
-                            Some(std::ptr::null()),
-                            windows::Win32::System::Com::COINIT_MULTITHREADED,
-                        )
-                    }
-                    .ok()?;
-
-                    let image_data = saya_ocr::capture_screen_region(region)?;
-                    let text = saya_ocr::recognize_sync(&image_data, &ocr_language)?;
-                    Ok::<_, anyhow::Error>((image_data.len(), text))
-                })
-                .await;
-
-                match result {
-                    Ok(Ok((bytes, text))) => {
-                        tracing::debug!(
-                            ">>> [OCR] Captured {} bytes, got text ({} chars)",
-                            bytes,
-                            text.len()
-                        );
-
-                        if !text.trim().is_empty() {
-                            match app_to_ui_tx.send(AppEvent::TextInput(text)).await {
-                                Ok(_) => tracing::debug!(">>> [OCR] TextInput sent!"),
-                                Err(e) => tracing::debug!(">>> [OCR] Send failed: {}", e),
-                            }
-                        } else {
-                            tracing::debug!(">>> [OCR] Empty text after OCR");
-                            let _ = app_to_ui_tx
-                                .send(AppEvent::OcrStatusUpdate {
-                                    status: "No text found".to_string(),
-                                    capturing: false,
-                                })
-                                .await;
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        tracing::debug!(">>> [OCR] OCR failed: {}", e);
                         let _ = app_to_ui_tx
                             .send(AppEvent::OcrStatusUpdate {
-                                status: format!("OCR failed: {}", e),
+                                status: "Processing...".to_string(),
+                                capturing: false,
+                            })
+                            .await;
+
+                        // Process dictionary
+                        let normalized = processor.normalize(&text);
+                        let tokens = processor.tokenize(&normalized);
+                        let mut display_results = Vec::new();
+
+                        for token in tokens.iter().take(10) {
+                            let results = processor.lookup(token);
+                            if !results.is_empty() {
+                                for result in results.iter().take(5) {
+                                    display_results.push(DisplayResult {
+                                        term: result.term.clone(),
+                                        reading: result.readings.join(", "),
+                                        definition: result.definitions.join("; "),
+                                        frequency: result.metadata.get("frequency_stars").cloned(),
+                                        pitch_accent: result.metadata.get("pitch_accent").cloned(),
+                                        jlpt_level: result.metadata.get("jlpt_level").cloned(),
+                                        conjugation: result.metadata.get("conjugation").cloned(),
+                                    });
+                                }
+                            }
+                        }
+
+                        if !display_results.is_empty() {
+                            app_to_ui_tx.send(AppEvent::ShowResults(display_results)).await?;
+                        }
+
+                        let _ = app_to_ui_tx
+                            .send(AppEvent::OcrStatusUpdate {
+                                status: "Ready".to_string(),
+                                capturing: false,
+                            })
+                            .await;
+                    } else {
+                        let _ = app_to_ui_tx
+                            .send(AppEvent::OcrStatusUpdate {
+                                status: "No text found".to_string(),
                                 capturing: false,
                             })
                             .await;
                     }
-                    Err(e) => {
-                        tracing::debug!(">>> [OCR] Task join error: {}", e);
-                    }
                 }
-            });
+                Ok(Err(e)) => {
+                    tracing::error!(">>> [OCR] Failed: {}", e);
+                    let _ = app_to_ui_tx
+                        .send(AppEvent::OcrStatusUpdate {
+                            status: format!("Failed: {}", e),
+                            capturing: false,
+                        })
+                        .await;
+                }
+                Err(e) => {
+                    tracing::error!(">>> [OCR] Task error: {}", e);
+                    let _ = app_to_ui_tx
+                        .send(AppEvent::OcrStatusUpdate {
+                            status: "Error".to_string(),
+                            capturing: false,
+                        })
+                        .await;
+                }
+            }
         }
         AppEvent::OcrStatusUpdate { status, capturing } => {
             tracing::info!("OCR status: {} (capturing: {})", status, capturing);
@@ -357,6 +371,9 @@ async fn handle_events(
                     })
                     .await;
             }
+        }
+        AppEvent::BackendReady => {
+            // UI-only event, ignore in backend
         }
     }
 

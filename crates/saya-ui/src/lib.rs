@@ -108,6 +108,7 @@ fn run_slint_ui(
     {
         let tx = ui_to_app_tx.clone();
         let ocr_weak = ocr_window.as_weak();
+        let ids = window_ids.clone();
 
         ocr_window.on_capture_clicked(move || {
             tracing::debug!("[SLINT] OCR capture button clicked");
@@ -119,25 +120,56 @@ fn run_slint_ui(
                 let pos = win.window().position();
                 let size = win.window().size();
 
+                // Calculate green zone (exclude top controls 108px + bottom 66px)
+                let controls_top = 108;
+                let controls_height = 108 + 66;
+                let green_height = size.height.saturating_sub(controls_height);
+
+                let selected_idx = win.get_selected_window_index();
+                let window_id = if selected_idx >= 0 {
+                    ids.borrow().get(selected_idx as usize).copied()
+                } else {
+                    None
+                };
+
                 tracing::info!(
-                    "[SLINT] OCR window: {}x{} at ({}, {})",
+                    "[SLINT] Capturing green zone: {}x{} at ({}, {}), window: {:?}",
                     size.width,
-                    size.height,
+                    green_height,
                     pos.x,
-                    pos.y
+                    pos.y + controls_top,
+                    window_id
                 );
 
+                // Always send with region (green zone coordinates)
                 match tx.send(AppEvent::TriggerOcr {
                     x: pos.x,
-                    y: pos.y,
+                    y: pos.y + controls_top,
                     width: size.width,
-                    height: size.height,
+                    height: green_height,
                 }) {
-                    Ok(_) => tracing::info!("[SLINT] TriggerOcr sent successfully"),
-                    Err(e) => tracing::error!("[SLINT] Failed to send: {}", e),
+                    Ok(_) => tracing::info!("[SLINT] TriggerOcr sent"),
+                    Err(e) => tracing::error!("[SLINT] Send failed: {}", e),
                 }
             }
         });
+    }
+
+    // Auto-populate window list on startup (but don't select any)
+    if let Ok(windows) = saya_ocr::list_windows() {
+        let mut stored_ids = window_ids.borrow_mut();
+        let titles: Vec<slint::SharedString> = windows
+            .iter()
+            .map(|(id, title)| {
+                stored_ids.push(*id);
+                title.chars().take(40).collect::<String>().into()
+            })
+            .collect();
+
+        let model = std::rc::Rc::new(slint::VecModel::from(titles));
+        ocr_window.set_window_list(model.into());
+        ocr_window.set_selected_window_index(-1); // Don't auto-select
+        tracing::debug!("[SLINT] Auto-populated {} windows", stored_ids.len());
     }
 
     ocr_window.show()?;
@@ -238,6 +270,13 @@ fn run_slint_ui(
                             );
                             w.set_status(status.into());
                             w.set_is_capturing(capturing);
+                        }
+                    }
+                    AppEvent::BackendReady => {
+                        if let Some(w) = ocr_weak.upgrade() {
+                            tracing::debug!("[SLINT] Backend ready");
+                            w.set_is_ready(true);
+                            w.set_status("Ready".into());
                         }
                     }
                     _ => {}

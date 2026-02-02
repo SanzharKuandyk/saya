@@ -60,12 +60,15 @@ export component OverlayWindow inherits Window {
                     }
                 }
 
-                Text {
-                    text: hooked-text;
-                    font-size: 18px;
-                    color: #ffffff;
-                    wrap: word-wrap;
-                    overflow: elide;
+                ScrollView {
+                    max-height: 80px;
+
+                    Text {
+                        text: hooked-text;
+                        font-size: 18px;
+                        color: #ffffff;
+                        wrap: word-wrap;
+                    }
                 }
             }
         }

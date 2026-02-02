@@ -23,6 +23,7 @@ pub enum AppEvent {
         status: String,
         capturing: bool,
     },
+    BackendReady,
 }
 
 #[derive(Debug, Clone)]
