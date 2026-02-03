@@ -19,9 +19,8 @@ mod tests;
 
 use events::event_loop;
 use io::watcher_io;
+use state::AppState;
 use ui::ui_loop;
-
-use self::state::AppState;
 
 #[tokio::main(worker_threads = 4)]
 async fn main() {
@@ -76,7 +75,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let ui = spawn_with_cancel(
         "ui_loop",
         cancel.clone(),
-        ui_loop(state.clone(), app_to_ui_rx, event_tx.clone()),
+        ui_loop(app_to_ui_rx, event_tx.clone()),
     );
 
     let watcher = {

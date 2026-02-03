@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 unicode-normalization = { workspace = true }
 tokio = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-saya-config = { path = "../saya-config/" }

@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
 use kanal::{AsyncReceiver, AsyncSender, Receiver, Sender};
-use saya_core::state::AppState;
-use saya_core::types::{AppEvent, DisplayResult, TextSource, UiEvent};
+use saya_core::types::{AppEvent, CaptureRegion, DisplayResult, TextSource, UiEvent};
 
 slint::include_modules!();
 
 pub async fn ui_loop(
-    _state: Arc<AppState>,
     app_to_ui_rx: AsyncReceiver<AppEvent>,
     ui_to_app_tx: AsyncSender<AppEvent>,
 ) -> anyhow::Result<()> {
@@ -142,12 +140,13 @@ fn run_slint_ui(
                 );
 
                 // Always send with region (green zone coordinates)
-                match tx.send(AppEvent::TriggerOcr {
+                let region = CaptureRegion {
                     x: pos.x,
                     y: pos.y + controls_top,
                     width: size.width,
                     height: green_height,
-                }) {
+                };
+                match tx.send(AppEvent::TriggerOcr(region)) {
                     Ok(_) => tracing::info!("[SLINT] TriggerOcr sent"),
                     Err(e) => tracing::error!("[SLINT] Send failed: {}", e),
                 }
@@ -283,7 +282,11 @@ fn run_slint_ui(
                             w.set_status("Ready".into());
                         }
                     }
-                    AppEvent::ShowTranslation { text, from_lang, to_lang } => {
+                    AppEvent::ShowTranslation {
+                        text,
+                        from_lang,
+                        to_lang,
+                    } => {
                         if let Some(w) = window_weak.upgrade() {
                             tracing::debug!("[SLINT] Translation: {} -> {}", from_lang, to_lang);
                             w.set_translation(text.into());

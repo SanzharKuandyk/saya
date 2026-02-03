@@ -4464,6 +4464,7 @@ dependencies = [
 name = "saya-config"
 version = "0.1.0"
 dependencies = [
+ "saya-core",
  "serde",
 ]
 
@@ -4471,7 +4472,7 @@ dependencies = [
 name = "saya-core"
 version = "0.1.0"
 dependencies = [
- "saya-config",
+ "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
@@ -4510,6 +4511,7 @@ dependencies = [
  "anyhow",
  "global-hotkey",
  "image",
+ "saya-core",
  "tokio",
  "tracing",
  "windows 0.62.2",

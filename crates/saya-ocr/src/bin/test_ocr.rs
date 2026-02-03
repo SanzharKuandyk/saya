@@ -1,6 +1,7 @@
 //! Simple OCR test - run with: cargo run -p saya-ocr --bin test_ocr
 
 use anyhow::Result;
+use saya_ocr::init_ocr_engine;
 
 fn main() -> Result<()> {
     tracing::debug!("=== OCR Test ===\n");
@@ -24,8 +25,9 @@ fn main() -> Result<()> {
 
     // 4. Run OCR
     tracing::debug!("\n3. Running OCR (ja)...");
+    let engine = init_ocr_engine("ja").expect("Failed to init OCR engine");
     let start = std::time::Instant::now();
-    match saya_ocr::recognize_sync(&png_data, "ja") {
+    match saya_ocr::recognize_sync(&engine, &png_data, "ja") {
         Ok(text) => {
             tracing::debug!("   {:?} - {} chars", start.elapsed(), text.len());
             if !text.is_empty() {

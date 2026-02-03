@@ -21,3 +21,4 @@ windows = { version = "0.62.2", features = [
 xcap = "0.0.14"
 global-hotkey = "0.6"
 image = "0.25"
+saya-core = { path = "../saya-core/" }

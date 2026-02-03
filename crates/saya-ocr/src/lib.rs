@@ -1,10 +1,10 @@
-mod ocr;
 mod capture;
 mod hotkey;
+mod ocr;
 
-pub use ocr::recognize_sync;
 pub use capture::{
-    capture_screen_region, capture_primary_screen, capture_window,
-    capture_window_by_title, list_windows, CaptureRegion,
+    capture_primary_screen, capture_screen_region, capture_window, capture_window_by_title,
+    list_windows,
 };
 pub use hotkey::HotkeyManager;
+pub use ocr::{init_ocr_engine, recognize_sync};

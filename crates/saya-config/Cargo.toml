@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 serde = { workspace = true }
+saya-core = { path = "../saya-core/" }

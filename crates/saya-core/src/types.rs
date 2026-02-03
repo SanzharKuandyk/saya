@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     ConfigChanged,
@@ -10,12 +12,7 @@ pub enum AppEvent {
     },
     ShowResults(Vec<DisplayResult>),
     CreateCard(DisplayResult),
-    TriggerOcr {
-        x: i32,
-        y: i32,
-        width: u32,
-        height: u32,
-    },
+    TriggerOcr(CaptureRegion),
     CaptureWindow {
         window_id: Option<u32>,
     },
@@ -48,6 +45,14 @@ pub struct DisplayResult {
     pub pitch_accent: Option<String>,
     pub jlpt_level: Option<String>,
     pub conjugation: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct CaptureRegion {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Clone)]

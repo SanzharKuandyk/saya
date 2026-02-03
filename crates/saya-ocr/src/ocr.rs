@@ -7,21 +7,7 @@ use windows::{
     core::HSTRING,
 };
 
-/// Wrapper around async func called via tokio::spawn_blocking
-pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> anyhow::Result<String> {
-    tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(recognize_async(image_bytes, language_code))
-    })
-}
-
-/// Perform OCR on PNG/BMP image bytes
-pub async fn recognize_async(image_bytes: &[u8], language_code: &str) -> anyhow::Result<String> {
-    tracing::debug!(
-        ">>> [OCR] recognize_async: {} bytes, lang={}",
-        image_bytes.len(),
-        language_code
-    );
-
+pub fn init_ocr_engine(language_code: &str) -> anyhow::Result<WinOcrEngine> {
     // Create OCR engine
     let language = Language::CreateLanguage(&HSTRING::from(language_code))
         .with_context(|| format!("Invalid language code: {}", language_code))?;
@@ -34,6 +20,36 @@ pub async fn recognize_async(image_bytes: &[u8], language_code: &str) -> anyhow:
     })?;
 
     tracing::debug!(">>> [OCR] Engine created");
+
+    Ok(engine)
+}
+
+/// Wrapper around async func called via tokio::spawn_blocking
+pub fn recognize_sync(
+    engine: &WinOcrEngine,
+    image_bytes: &[u8],
+    language_code: &str,
+) -> anyhow::Result<String> {
+    tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(recognize_async(
+            engine,
+            image_bytes,
+            language_code,
+        ))
+    })
+}
+
+/// Perform OCR on PNG/BMP image bytes
+pub async fn recognize_async(
+    engine: &WinOcrEngine,
+    image_bytes: &[u8],
+    language_code: &str,
+) -> anyhow::Result<String> {
+    tracing::debug!(
+        ">>> [OCR] recognize_async: {} bytes, lang={}",
+        image_bytes.len(),
+        language_code
+    );
 
     // Load image into memory stream
     let stream = InMemoryRandomAccessStream::new()?;

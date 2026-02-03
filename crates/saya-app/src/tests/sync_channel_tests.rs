@@ -1,4 +1,4 @@
-use saya_core::types::AppEvent;
+use saya_core::types::{AppEvent, CaptureRegion};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -11,7 +11,9 @@ async fn test_tokio_spawn_from_sync_context() {
         let tx = tx.clone();
         tokio::spawn(async move {
             tracing::debug!("Tokio task: sending event");
-            tx.send(AppEvent::TextInput("test".to_string())).await.expect("send failed");
+            tx.send(AppEvent::TextInput("test".to_string()))
+                .await
+                .expect("send failed");
             tracing::debug!("Tokio task: event sent");
         });
         tracing::debug!("Sync callback: returned immediately");
@@ -41,12 +43,14 @@ async fn test_ui_button_click_with_tokio_spawn() {
         tracing::debug!("Button click (sync context)");
         let tx = tx.clone();
         tokio::spawn(async move {
-            tx.send(AppEvent::TriggerOcr {
+            tx.send(AppEvent::TriggerOcr(CaptureRegion {
                 x: 100,
                 y: 200,
                 width: 300,
                 height: 400,
-            }).await.expect("send failed");
+            }))
+            .await
+            .expect("send failed");
         });
     };
 
@@ -56,7 +60,12 @@ async fn test_ui_button_click_with_tokio_spawn() {
     let result = timeout(Duration::from_secs(2), rx.recv()).await;
 
     match result {
-        Ok(Ok(AppEvent::TriggerOcr { x, y, width, height })) => {
+        Ok(Ok(AppEvent::TriggerOcr(CaptureRegion {
+            x,
+            y,
+            width,
+            height,
+        }))) => {
             tracing::debug!("Event received");
             assert_eq!(x, 100);
             assert_eq!(y, 200);
@@ -76,7 +85,9 @@ async fn test_multiple_spawned_sends() {
     for i in 0..100 {
         let tx = tx.clone();
         tokio::spawn(async move {
-            tx.send(AppEvent::TextInput(format!("msg{}", i))).await.expect("send failed");
+            tx.send(AppEvent::TextInput(format!("msg{}", i)))
+                .await
+                .expect("send failed");
         });
     }
 
@@ -86,7 +97,8 @@ async fn test_multiple_spawned_sends() {
             rx.recv().await.expect("recv failed");
             count += 1;
         }
-    }).await;
+    })
+    .await;
 
     assert!(result.is_ok(), "Timeout waiting for events!");
     assert_eq!(count, 100);

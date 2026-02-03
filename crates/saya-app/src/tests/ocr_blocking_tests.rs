@@ -2,11 +2,12 @@
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+use kanal::unbounded_async;
+use saya_core::types::{AppEvent, CaptureRegion};
+use saya_ocr::{capture_screen_region, init_ocr_engine, recognize_sync};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use kanal::unbounded_async;
-use saya_core::types::AppEvent;
-use saya_ocr::{CaptureRegion, recognize_sync, capture_screen_region};
 
 /// Test 1: Does spawn_blocking work?
 #[tokio::test]
@@ -14,7 +15,8 @@ async fn test_spawn_blocking_works() {
     let result = tokio::task::spawn_blocking(|| {
         std::thread::sleep(Duration::from_millis(10));
         42
-    }).await;
+    })
+    .await;
     assert_eq!(result.unwrap(), 42);
 }
 
@@ -38,7 +40,11 @@ async fn test_parallel_spawn_blocking() {
 
     let elapsed = start.elapsed();
     tracing::debug!("Parallel spawn_blocking took: {:?}", elapsed);
-    assert!(elapsed < Duration::from_millis(200), "Too slow: {:?}", elapsed);
+    assert!(
+        elapsed < Duration::from_millis(200),
+        "Too slow: {:?}",
+        elapsed
+    );
     assert_eq!(r1, "one");
     assert_eq!(r2, "two");
 }
@@ -47,11 +53,12 @@ async fn test_parallel_spawn_blocking() {
 #[tokio::test]
 async fn test_kanal_works() {
     let (tx, rx) = unbounded_async::<u32>();
-    let handle = tokio::spawn(async move {
-        rx.recv().await.unwrap()
-    });
+    let handle = tokio::spawn(async move { rx.recv().await.unwrap() });
     tx.send(123).await.unwrap();
-    let result = timeout(Duration::from_secs(1), handle).await.unwrap().unwrap();
+    let result = timeout(Duration::from_secs(1), handle)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(result, 123);
 }
 
@@ -62,9 +69,14 @@ async fn test_spawn_blocking_to_kanal() {
 
     tokio::task::spawn_blocking(move || {
         tx.try_send("from blocking".to_string()).unwrap();
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
 
-    let result = timeout(Duration::from_secs(1), rx.recv()).await.unwrap().unwrap();
+    let result = timeout(Duration::from_secs(1), rx.recv())
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(result, "from blocking");
 }
 
@@ -76,9 +88,14 @@ async fn test_spawn_blocking_to_app_event() {
     tokio::task::spawn_blocking(move || {
         let event = AppEvent::TextInput("test".to_string());
         tx.try_send(event).unwrap();
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
 
-    let event = timeout(Duration::from_secs(1), rx.recv()).await.unwrap().unwrap();
+    let event = timeout(Duration::from_secs(1), rx.recv())
+        .await
+        .unwrap()
+        .unwrap();
     match event {
         AppEvent::TextInput(text) => assert_eq!(text, "test"),
         _ => panic!("Wrong event"),
@@ -111,11 +128,13 @@ async fn test_event_loop_with_kanal() {
 /// Test 7: Check worker threads availability
 #[tokio::test]
 async fn test_worker_threads() {
-    let handles: Vec<_> = (0..4).map(|_| {
-        tokio::task::spawn_blocking(|| {
-            std::thread::sleep(Duration::from_millis(50));
+    let handles: Vec<_> = (0..4)
+        .map(|_| {
+            tokio::task::spawn_blocking(|| {
+                std::thread::sleep(Duration::from_millis(50));
+            })
         })
-    }).collect();
+        .collect();
 
     for h in handles {
         timeout(Duration::from_secs(1), h).await.unwrap().unwrap();
@@ -165,10 +184,16 @@ async fn test_pipeline() {
         "ocr_result"
     });
 
-    let ocr_result = timeout(Duration::from_secs(2), ocr_task).await.unwrap().unwrap();
+    let ocr_result = timeout(Duration::from_secs(2), ocr_task)
+        .await
+        .unwrap()
+        .unwrap();
     result_tx.send(ocr_result.to_string()).await.unwrap();
 
-    let final_result = timeout(Duration::from_secs(1), event_loop).await.unwrap().unwrap();
+    let final_result = timeout(Duration::from_secs(1), event_loop)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(final_result, "ocr_result");
     tracing::debug!("Pipeline test passed!");
 }
@@ -194,12 +219,14 @@ async fn test_real_ocr_performance() {
 
         tracing::debug!("[OCR TEST] Starting OCR...");
         let ocr_start = std::time::Instant::now();
-        let text = recognize_sync(&image_data, "ja").expect("OCR failed");
+        let engine = init_ocr_engine("ja").expect("Failed to init the engine");
+        let text = recognize_sync(&engine, &image_data, "ja").expect("OCR failed");
         let ocr_time = ocr_start.elapsed();
         tracing::debug!("[OCR TEST] OCR took: {:?}", ocr_time);
 
         text
-    }).await;
+    })
+    .await;
 
     let total = start.elapsed();
     tracing::debug!("[OCR TEST] Total: {:?}", total);
@@ -214,14 +241,18 @@ async fn test_real_ocr_performance() {
     }
 
     // If this takes > 5 seconds, we have a blocking issue
-    assert!(total < Duration::from_secs(10), "OCR took too long: {:?}", total);
+    assert!(
+        total < Duration::from_secs(10),
+        "OCR took too long: {:?}",
+        total
+    );
 }
 
 /// Test 11: Simulate actual app flow - spawn_blocking -> send event -> receive event
 #[tokio::test]
 async fn test_app_event_flow_simulation() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use saya_core::types::AppEvent;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     let (tx, rx) = unbounded_async::<AppEvent>();
     let event_count = Arc::new(AtomicUsize::new(0));
@@ -252,15 +283,19 @@ async fn test_app_event_flow_simulation() {
 
             // This is what events.rs does
             let result = tokio::task::spawn_blocking(move || {
+                let engine = init_ocr_engine("ja").expect("Failed to init the engine");
                 let image_data = capture_screen_region(region).expect("Capture failed");
-                let text = recognize_sync(&image_data, "ja").expect("OCR failed");
-                text
-            }).await;
+
+                recognize_sync(&engine, &image_data, "ja").expect("OCR failed")
+            })
+            .await;
 
             match result {
                 Ok(text) => {
                     tracing::debug!("[APP FLOW] Sending TextInput {}...", i + 1);
-                    tx.send(AppEvent::TextInput(text)).await.expect("Send failed");
+                    tx.send(AppEvent::TextInput(text))
+                        .await
+                        .expect("Send failed");
                 }
                 Err(e) => {
                     tracing::debug!("[APP FLOW] OCR failed: {}", e);
@@ -284,8 +319,8 @@ async fn test_app_event_flow_simulation() {
 /// This simulates what the real app does
 #[tokio::test]
 async fn test_spawn_local_simulation() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use saya_core::types::AppEvent;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     let (tx, rx) = unbounded_async::<AppEvent>();
     let received = Arc::new(AtomicUsize::new(0));
@@ -298,8 +333,12 @@ async fn test_spawn_local_simulation() {
             let tx_clone = tx.clone();
             let _ = tokio::spawn(async move {
                 tracing::debug!("[SPAWN_LOCAL] Sending event {}", i + 1);
-                tx_clone.send(AppEvent::TextInput(format!("test_{}", i))).await.ok();
-            }).await;
+                tx_clone
+                    .send(AppEvent::TextInput(format!("test_{}", i)))
+                    .await
+                    .ok();
+            })
+            .await;
 
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
@@ -319,7 +358,9 @@ async fn test_spawn_local_simulation() {
         }
     });
 
-    let _ = timeout(Duration::from_secs(5), spawn_local_task).await.unwrap();
+    let _ = timeout(Duration::from_secs(5), spawn_local_task)
+        .await
+        .unwrap();
     let _ = timeout(Duration::from_secs(1), event_loop).await.unwrap();
 
     let count = received.load(Ordering::SeqCst);

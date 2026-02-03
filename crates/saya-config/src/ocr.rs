@@ -1,3 +1,4 @@
+use saya_core::types::CaptureRegion;
 use serde::{Deserialize, Serialize};
 
 fn default_enabled() -> bool {
@@ -28,12 +29,4 @@ impl Default for OcrConfig {
             target_window: None,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy)]
-pub struct CaptureRegion {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
 }
