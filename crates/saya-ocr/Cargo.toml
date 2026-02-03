@@ -10,7 +10,8 @@ path = "src/bin/test_ocr.rs"
 [dependencies]
 anyhow = { workspace = true }
 tracing = { workspace = true }
-windows = { version = "0.54", features = [
+tokio = { workspace = true }
+windows = { version = "0.62.2", features = [
     "Foundation",
     "Storage_Streams",
     "Graphics_Imaging",

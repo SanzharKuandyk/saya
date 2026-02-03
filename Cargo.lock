@@ -4450,13 +4450,14 @@ dependencies = [
  "saya-ocr",
  "saya-translator",
  "saya-ui",
+ "serde",
  "serde_json",
  "tokio",
  "tokio-util",
  "tokio_util_watchdog",
  "tracing",
  "tracing-subscriber",
- "windows 0.54.0",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -4509,8 +4510,9 @@ dependencies = [
  "anyhow",
  "global-hotkey",
  "image",
+ "tokio",
  "tracing",
- "windows 0.54.0",
+ "windows 0.62.2",
  "xcap",
 ]
 

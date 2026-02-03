@@ -1,10 +1,7 @@
-use std::fs::File;
 use std::future::Future;
-use std::io::BufReader;
 use std::sync::Arc;
 use std::time::Duration;
 
-use saya_config::Config;
 use saya_core::types::AppEvent;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
@@ -13,6 +10,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod events;
 pub mod io;
+pub mod profile;
 pub mod state;
 pub mod ui;
 
@@ -40,8 +38,8 @@ async fn main() {
 
     tracing::info!("Saya starting...");
 
-    let config = load_config().expect("failed to load config...");
-
+    profile::init_user_config().expect("failed to load user config");
+    let config = profile::load_user_profile("main").expect("failed to load user profile");
     let state = Arc::new(AppState::new(config));
 
     let watchdog_timeout = {
@@ -133,15 +131,4 @@ where
             }
         }
     })
-}
-
-fn load_config() -> anyhow::Result<Config> {
-    tracing::info!("Loading config...");
-
-    let file = File::open("config.json")?;
-    let reader = BufReader::new(file);
-
-    let config: Config = serde_json::from_reader(reader)?;
-
-    Ok(config)
 }

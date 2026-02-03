@@ -193,7 +193,9 @@ async fn handle_events(
                         }
 
                         if !display_results.is_empty() {
-                            let _ = app_to_ui_tx.send(AppEvent::ShowResults(display_results)).await;
+                            let _ = app_to_ui_tx
+                                .send(AppEvent::ShowResults(display_results))
+                                .await;
                         }
 
                         // Translation
@@ -321,7 +323,9 @@ async fn handle_events(
                         }
 
                         if !display_results.is_empty() {
-                            app_to_ui_tx.send(AppEvent::ShowResults(display_results)).await?;
+                            app_to_ui_tx
+                                .send(AppEvent::ShowResults(display_results))
+                                .await?;
                         }
 
                         // Translation

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Context;
 use windows::{
     Globalization::Language,
     Graphics::Imaging::{BitmapAlphaMode, BitmapDecoder, BitmapPixelFormat},
@@ -7,10 +7,17 @@ use windows::{
     core::HSTRING,
 };
 
+/// Wrapper around async func called via tokio::spawn_blocking
+pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> anyhow::Result<String> {
+    tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(recognize_async(image_bytes, language_code))
+    })
+}
+
 /// Perform OCR on PNG/BMP image bytes
-pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String> {
+pub async fn recognize_async(image_bytes: &[u8], language_code: &str) -> anyhow::Result<String> {
     tracing::debug!(
-        ">>> [OCR] recognize_sync: {} bytes, lang={}",
+        ">>> [OCR] recognize_async: {} bytes, lang={}",
         image_bytes.len(),
         language_code
     );
@@ -32,19 +39,19 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
     let stream = InMemoryRandomAccessStream::new()?;
     let writer = DataWriter::CreateDataWriter(&stream)?;
     writer.WriteBytes(image_bytes)?;
-    writer.StoreAsync()?.get()?;
-    writer.FlushAsync()?.get()?;
+    writer.StoreAsync()?.await?;
+    writer.FlushAsync()?.await?;
     stream.Seek(0)?;
 
     tracing::debug!(">>> [OCR] Image loaded to stream");
 
     // Decode image
-    let decoder = BitmapDecoder::CreateAsync(&stream)?.get()?;
+    let decoder = BitmapDecoder::CreateAsync(&stream)?.await?;
 
     // Convert to Bgra8 format required by OCR
     let bitmap = decoder
         .GetSoftwareBitmapConvertedAsync(BitmapPixelFormat::Bgra8, BitmapAlphaMode::Premultiplied)?
-        .get()?;
+        .await?;
 
     tracing::debug!(
         ">>> [OCR] Bitmap: {}x{}",
@@ -53,7 +60,7 @@ pub fn recognize_sync(image_bytes: &[u8], language_code: &str) -> Result<String>
     );
 
     // Run OCR
-    let result = engine.RecognizeAsync(&bitmap)?.get()?;
+    let result = engine.RecognizeAsync(&bitmap)?.await?;
     let text = result.Text()?.to_string();
 
     tracing::debug!(">>> [OCR] Result: '{}' ({} chars)", text, text.len());
