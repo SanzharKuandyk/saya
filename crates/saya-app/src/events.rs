@@ -3,7 +3,8 @@ use std::sync::Arc;
 use kanal::{AsyncReceiver, AsyncSender};
 use saya_core::language::LanguageProcessor;
 use saya_core::types::{AppEvent, DisplayResult, TextSource};
-use saya_lang_japanese::JapaneseProcessor;
+use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
+use saya_translator::Translator;
 
 use crate::state::AppState;
 
@@ -34,6 +35,19 @@ pub async fn event_loop(
         }
     };
 
+    // Initialize translator
+    let translator = {
+        let config = state.config.read().await;
+        if config.translator.enabled && !config.translator.api_key.is_empty() {
+            Some(JapaneseTranslator::new(
+                config.translator.api_key.clone(),
+                config.translator.api_url.clone(),
+            ))
+        } else {
+            None
+        }
+    };
+
     tracing::info!("[EVENT_LOOP] Starting main loop, waiting for events");
     loop {
         tracing::info!("[EVENT_LOOP] Calling recv().await...");
@@ -47,6 +61,7 @@ pub async fn event_loop(
             state.clone(),
             &processor,
             anki_client.as_ref(),
+            translator.as_ref(),
             &app_to_ui_tx,
             event,
         )
@@ -58,6 +73,7 @@ async fn handle_events(
     state: Arc<AppState>,
     processor: &JapaneseProcessor,
     anki_client: Option<&saya_anki::AnkiConnectClient>,
+    translator: Option<&JapaneseTranslator>,
     app_to_ui_tx: &AsyncSender<AppEvent>,
     event: AppEvent,
 ) -> anyhow::Result<()> {
@@ -180,6 +196,29 @@ async fn handle_events(
                             let _ = app_to_ui_tx.send(AppEvent::ShowResults(display_results)).await;
                         }
 
+                        // Translation
+                        if let Some(t) = translator {
+                            let config = state.config.read().await;
+                            let from = config.translator.from_lang.clone();
+                            let to = config.translator.to_lang.clone();
+                            drop(config);
+
+                            match t.translate(&text, from.clone(), to.clone()).await {
+                                Ok(translation) => {
+                                    let _ = app_to_ui_tx
+                                        .send(AppEvent::ShowTranslation {
+                                            text: translation.text,
+                                            from_lang: from,
+                                            to_lang: to,
+                                        })
+                                        .await;
+                                }
+                                Err(e) => {
+                                    tracing::warn!("Translation failed: {}", e);
+                                }
+                            }
+                        }
+
                         let _ = app_to_ui_tx
                             .send(AppEvent::OcrStatusUpdate {
                                 status: "Ready".to_string(),
@@ -285,6 +324,29 @@ async fn handle_events(
                             app_to_ui_tx.send(AppEvent::ShowResults(display_results)).await?;
                         }
 
+                        // Translation
+                        if let Some(t) = translator {
+                            let config = state.config.read().await;
+                            let from = config.translator.from_lang.clone();
+                            let to = config.translator.to_lang.clone();
+                            drop(config);
+
+                            match t.translate(&text, from.clone(), to.clone()).await {
+                                Ok(translation) => {
+                                    let _ = app_to_ui_tx
+                                        .send(AppEvent::ShowTranslation {
+                                            text: translation.text,
+                                            from_lang: from,
+                                            to_lang: to,
+                                        })
+                                        .await;
+                                }
+                                Err(e) => {
+                                    tracing::warn!("Translation failed: {}", e);
+                                }
+                            }
+                        }
+
                         let _ = app_to_ui_tx
                             .send(AppEvent::OcrStatusUpdate {
                                 status: "Ready".to_string(),
@@ -371,6 +433,9 @@ async fn handle_events(
             }
         }
         AppEvent::BackendReady => {
+            // UI-only event, ignore in backend
+        }
+        AppEvent::ShowTranslation { .. } => {
             // UI-only event, ignore in backend
         }
     }

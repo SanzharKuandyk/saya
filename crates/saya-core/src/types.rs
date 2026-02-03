@@ -24,6 +24,11 @@ pub enum AppEvent {
         capturing: bool,
     },
     BackendReady,
+    ShowTranslation {
+        text: String,
+        from_lang: String,
+        to_lang: String,
+    },
 }
 
 #[derive(Debug, Clone)]

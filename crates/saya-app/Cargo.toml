@@ -25,4 +25,5 @@ saya-ui = { path = "../saya-ui/" }
 saya-io = { path = "../saya-io/" }
 saya-ocr = { path = "../saya-ocr/" }
 saya-anki = { path = "../saya-anki/" }
+saya-translator = { path = "../saya-translator/" }
 saya-lang-japanese = { path = "../../languages/japanese/" }

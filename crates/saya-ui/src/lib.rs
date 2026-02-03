@@ -283,6 +283,12 @@ fn run_slint_ui(
                             w.set_status("Ready".into());
                         }
                     }
+                    AppEvent::ShowTranslation { text, from_lang, to_lang } => {
+                        if let Some(w) = window_weak.upgrade() {
+                            tracing::debug!("[SLINT] Translation: {} -> {}", from_lang, to_lang);
+                            w.set_translation(text.into());
+                        }
+                    }
                     _ => {}
                 });
             }

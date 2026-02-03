@@ -17,6 +17,7 @@ export component OverlayWindow inherits Window {
     in-out property <[DictResult]> results: [];
     in-out property <string> hooked-text: "";
     in-out property <string> text-source: "";
+    in-out property <string> translation: "";
     callback add-to-anki(int);
 
     preferred-width: 600px;
@@ -68,6 +69,31 @@ export component OverlayWindow inherits Window {
                     color: #ffffff;
                     wrap: word-wrap;
                     horizontal-alignment: left;
+                }
+
+                if translation != "": Rectangle {
+                    background: #1a3a2a;
+                    border-radius: 4px;
+                    vertical-stretch: 0;
+                    height: self.preferred-height;
+
+                    HorizontalBox {
+                        padding: 8px;
+                        spacing: 6px;
+
+                        Text {
+                            text: "→";
+                            font-size: 14px;
+                            color: #4ecdc4;
+                        }
+
+                        Text {
+                            text: translation;
+                            font-size: 14px;
+                            color: #a0d0c0;
+                            wrap: word-wrap;
+                        }
+                    }
                 }
             }
         }

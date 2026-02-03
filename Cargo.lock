@@ -4448,6 +4448,7 @@ dependencies = [
  "saya-io",
  "saya-lang-japanese",
  "saya-ocr",
+ "saya-translator",
  "saya-ui",
  "serde_json",
  "tokio",
@@ -4491,7 +4492,10 @@ dependencies = [
 name = "saya-lang-japanese"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "reqwest",
  "saya-core",
+ "saya-translator",
  "serde",
  "serde_json",
  "tracing",

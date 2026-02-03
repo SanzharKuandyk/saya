@@ -1,5 +1,4 @@
 {
-  "network": {},
   "ui": {
     "max_text_lines": 3
   },
@@ -16,6 +15,14 @@
   "dictionary": {
     "enabled": true,
     "additional_paths": []
+  },
+  "translator": {
+    "enabled": true,
+    "provider": "deepl",
+    "from_lang": "ja",
+    "to_lang": "en",
+    "api_key": "",
+    "api_url": "https://api-free.deepl.com/v2/translate"
   },
   "watchdog_timeout_ms": 10000,
   "delta_time": 100,
