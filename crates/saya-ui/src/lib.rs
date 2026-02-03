@@ -115,7 +115,7 @@ fn run_slint_ui(
 
             if let Some(win) = ocr_weak.upgrade() {
                 win.set_is_capturing(true);
-                win.set_status("Capturing...".into());
+                win.set_status("".into());
 
                 let pos = win.window().position();
                 let size = win.window().size();

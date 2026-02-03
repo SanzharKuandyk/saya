@@ -55,7 +55,9 @@ pub fn capture_primary_screen() -> Result<Vec<u8>> {
     let monitors = Monitor::all().context("Failed to get monitors")?;
     let monitor = monitors.first().context("No monitor found")?;
 
-    let image = monitor.capture_image().context("Failed to capture screen")?;
+    let image = monitor
+        .capture_image()
+        .context("Failed to capture screen")?;
     encode_png(&image)
 }
 
@@ -65,7 +67,9 @@ pub fn capture_primary_screen_raw() -> Result<RawImage> {
     let monitors = Monitor::all().context("Failed to get monitors")?;
     let monitor = monitors.first().context("No monitor found")?;
 
-    let image = monitor.capture_image().context("Failed to capture screen")?;
+    let image = monitor
+        .capture_image()
+        .context("Failed to capture screen")?;
     Ok(RawImage {
         width: image.width(),
         height: image.height(),
@@ -88,7 +92,9 @@ pub fn capture_screen_region(region: CaptureRegion) -> Result<Vec<u8>> {
         .or(monitors.first())
         .context("No monitor found")?;
 
-    let image = monitor.capture_image().context("Failed to capture screen")?;
+    let image = monitor
+        .capture_image()
+        .context("Failed to capture screen")?;
 
     // Crop to region using xcap's image (0.25)
     let cropped = xcap::image::imageops::crop_imm(
@@ -107,7 +113,12 @@ fn encode_png(image: &xcap::image::RgbaImage) -> Result<Vec<u8>> {
     use xcap::image::ImageEncoder;
     let mut buffer = Vec::new();
     xcap::image::codecs::png::PngEncoder::new(&mut buffer)
-        .write_image(image.as_raw(), image.width(), image.height(), xcap::image::ExtendedColorType::Rgba8)
+        .write_image(
+            image.as_raw(),
+            image.width(),
+            image.height(),
+            xcap::image::ExtendedColorType::Rgba8,
+        )
         .context("Failed to encode PNG")?;
     Ok(buffer)
 }

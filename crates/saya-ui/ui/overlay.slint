@@ -32,15 +32,17 @@ export component OverlayWindow inherits Window {
         if hooked-text != "": Rectangle {
             background: #2a2a2a;
             border-radius: 8px;
-            min-height: 60px;
-            max-height: 120px;
+            vertical-stretch: 0;
+            height: self.preferred-height;
 
             VerticalBox {
                 padding: 12px;
-                spacing: 6px;
+                spacing: 4px;
 
                 HorizontalBox {
+                    height: 16px;
                     spacing: 8px;
+                    vertical-stretch: 0;
 
                     Rectangle {
                         width: 8px;
@@ -66,13 +68,14 @@ export component OverlayWindow inherits Window {
                     color: #ffffff;
                     wrap: word-wrap;
                     horizontal-alignment: left;
-                    overflow: elide;
                 }
             }
         }
 
         // Bottom block: dictionary results
         ScrollView {
+            vertical-stretch: 1;
+
             VerticalBox {
                 spacing: 8px;
 
