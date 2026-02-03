@@ -1,7 +1,10 @@
+use std::fs::File;
 use std::future::Future;
+use std::io::BufReader;
 use std::sync::Arc;
 use std::time::Duration;
 
+use saya_config::Config;
 use saya_core::types::AppEvent;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
@@ -28,7 +31,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("debug"))
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("debug")),
         )
         .with_writer(std::io::stdout)
         .with_ansi(atty::is(atty::Stream::Stdout))
@@ -37,7 +40,9 @@ async fn main() {
 
     tracing::info!("Saya starting...");
 
-    let state = Arc::new(AppState::new());
+    let config = load_config().expect("failed to load config...");
+
+    let state = Arc::new(AppState::new(config));
 
     let watchdog_timeout = {
         let config = state.config.read().await;
@@ -128,4 +133,15 @@ where
             }
         }
     })
+}
+
+fn load_config() -> anyhow::Result<Config> {
+    tracing::info!("Loading config...");
+
+    let file = File::open("config.json")?;
+    let reader = BufReader::new(file);
+
+    let config: Config = serde_json::from_reader(reader)?;
+
+    Ok(config)
 }

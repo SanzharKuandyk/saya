@@ -1,5 +1,3 @@
-use std::env;
-
 use serde::{Deserialize, Serialize};
 
 use self::anki::AnkiConfig;
@@ -14,7 +12,24 @@ pub mod network;
 pub mod ocr;
 pub mod ui;
 
-#[derive(Default, Serialize, Deserialize)]
+fn default_watchdog_timeout_ms() -> u64 {
+    10000
+}
+
+fn default_delta_time() -> u64 {
+    100
+}
+
+fn default_timeout_seconds() -> i32 {
+    30
+}
+
+fn default_ws_url() -> String {
+    "ws://localhost:8080".to_string()
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct Config {
     pub network: NetworkConfig,
     pub ui: UiConfig,
@@ -22,47 +37,31 @@ pub struct Config {
     pub anki: AnkiConfig,
     pub dictionary: DictionaryConfig,
 
+    #[serde(default = "default_watchdog_timeout_ms")]
     pub watchdog_timeout_ms: u64,
-    /// App main loop delta time
+    #[serde(default = "default_delta_time")]
     pub delta_time: u64,
+    #[serde(default = "default_timeout_seconds")]
     pub timeout_seconds: i32,
-    /// Listen to websocket, if false use clipboard watcher
+    #[serde(default)]
     pub listen_to_ws: bool,
-    /// WebSocket URL to connect to
+    #[serde(default = "default_ws_url")]
     pub ws_url: String,
 }
 
-impl Config {
-    pub fn new() -> Self {
-        let watchdog_timeout_ms = env::var("WATCHDOG_TIMEOUT_MS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(10000); // 10 seconds default
-
-        let delta_time = env::var("DELTA_TIME_MS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(100); // 100ms default
-
-        let timeout_seconds = env::var("TIMEOUT_SECONDS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(30); // 30 seconds default
-
-        let ws_url = env::var("WS_URL").unwrap_or_else(|_| "ws://localhost:8080".to_string());
-
-        Config {
-            network: NetworkConfig::new(),
-            ui: UiConfig::new(),
-            ocr: OcrConfig::new(),
-            anki: AnkiConfig::new(),
-            dictionary: DictionaryConfig::new(),
-
-            watchdog_timeout_ms,
-            delta_time,
-            timeout_seconds,
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            network: NetworkConfig::default(),
+            ui: UiConfig::default(),
+            ocr: OcrConfig::default(),
+            anki: AnkiConfig::default(),
+            dictionary: DictionaryConfig::default(),
+            watchdog_timeout_ms: default_watchdog_timeout_ms(),
+            delta_time: default_delta_time(),
+            timeout_seconds: default_timeout_seconds(),
             listen_to_ws: false,
-            ws_url,
+            ws_url: default_ws_url(),
         }
     }
 }

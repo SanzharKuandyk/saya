@@ -4449,6 +4449,7 @@ dependencies = [
  "saya-lang-japanese",
  "saya-ocr",
  "saya-ui",
+ "serde_json",
  "tokio",
  "tokio-util",
  "tokio_util_watchdog",

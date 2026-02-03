@@ -1,24 +1,20 @@
 use serde::{Deserialize, Serialize};
 
+fn default_max_text_lines() -> u32 {
+    3
+}
+
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct UiConfig {
-    /// Maximum number of text lines to show in overlay
+    #[serde(default = "default_max_text_lines")]
     pub max_text_lines: u32,
 }
 
 impl Default for UiConfig {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl UiConfig {
-    pub fn new() -> Self {
-        let max_text_lines = std::env::var("UI_MAX_TEXT_LINES")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(3);
-
-        Self { max_text_lines }
+        Self {
+            max_text_lines: default_max_text_lines(),
+        }
     }
 }

@@ -7,9 +7,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         Self {
-            config: RwLock::new(Config::new()),
+            config: RwLock::new(config),
         }
     }
 }

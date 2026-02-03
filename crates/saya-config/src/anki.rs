@@ -1,24 +1,41 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Serialize, Deserialize)]
+fn default_enabled() -> bool {
+    true
+}
+
+fn default_url() -> String {
+    "http://localhost:8765".to_string()
+}
+
+fn default_deck() -> String {
+    "Japanese".to_string()
+}
+
+fn default_model() -> String {
+    "Basic".to_string()
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct AnkiConfig {
-    /// Enable Anki integration
+    #[serde(default = "default_enabled")]
     pub enabled: bool,
-    /// AnkiConnect URL
+    #[serde(default = "default_url")]
     pub url: String,
-    /// Default deck name
+    #[serde(default = "default_deck")]
     pub deck: String,
-    /// Default model name
+    #[serde(default = "default_model")]
     pub model: String,
 }
 
-impl AnkiConfig {
-    pub fn new() -> Self {
+impl Default for AnkiConfig {
+    fn default() -> Self {
         Self {
-            enabled: true,
-            url: "http://localhost:8765".to_string(),
-            deck: "Japanese".to_string(),
-            model: "Basic".to_string(),
+            enabled: default_enabled(),
+            url: default_url(),
+            deck: default_deck(),
+            model: default_model(),
         }
     }
 }

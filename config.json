@@ -1,0 +1,25 @@
+{
+  "network": {},
+  "ui": {
+    "max_text_lines": 3
+  },
+  "ocr": {
+    "enabled": true,
+    "language": "ja"
+  },
+  "anki": {
+    "enabled": true,
+    "url": "http://localhost:8765",
+    "deck": "Japanese",
+    "model": "Basic"
+  },
+  "dictionary": {
+    "enabled": true,
+    "additional_paths": []
+  },
+  "watchdog_timeout_ms": 10000,
+  "delta_time": 100,
+  "timeout_seconds": 30,
+  "listen_to_ws": false,
+  "ws_url": "ws://localhost:8080"
+}
