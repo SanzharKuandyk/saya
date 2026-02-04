@@ -148,10 +148,8 @@ fn run_slint_ui(
                     width: size.width,
                     height: green_height,
                 };
-                match tx.send(AppEvent::TriggerOcr(region)) {
-                    Ok(_) => tracing::info!("[SLINT] TriggerOcr sent"),
-                    Err(e) => tracing::error!("[SLINT] Send failed: {}", e),
-                }
+
+                let _ = send_capture_region(region, tx.clone());
             }
         });
     }
@@ -306,5 +304,14 @@ fn run_slint_ui(
     slint::run_event_loop()?;
 
     tracing::info!("[SLINT] Event loop exited");
+    Ok(())
+}
+
+pub fn send_capture_region(region: CaptureRegion, tx: Sender<AppEvent>) -> anyhow::Result<()> {
+    match tx.send(AppEvent::TriggerAutoOcr(region)) {
+        Ok(_) => tracing::info!("[SLINT] TriggerOcr sent"),
+        Err(e) => tracing::error!("[SLINT] Send failed: {}", e),
+    }
+
     Ok(())
 }

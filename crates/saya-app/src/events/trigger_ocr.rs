@@ -2,18 +2,19 @@ use std::sync::Arc;
 
 use kanal::AsyncSender;
 use saya_core::language::LanguageProcessor;
-use saya_types::{AppEvent, CaptureRegion, DisplayResult, TextSource};
 use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_translator::Translator;
+use saya_types::{AppEvent, CaptureRegion, DisplayResult, TextSource};
 
 use crate::AppState;
 
+/// handles ocr and loops it if ocr.auto is enabled
 pub async fn handle_ocr_trigger(
     state: Arc<AppState>,
     region: CaptureRegion,
     app_to_ui_tx: &AsyncSender<AppEvent>,
     processor: &JapaneseProcessor,
-    translator: Option<&JapaneseTranslator>,
+    translator: &Option<JapaneseTranslator>
 ) -> anyhow::Result<()> {
     let ocr_language = {
         let config = state.config.read().await;
@@ -38,7 +39,8 @@ pub async fn handle_ocr_trigger(
         .ok()?;
 
         let image_data = saya_ocr::capture_screen_region(region)?;
-        let text = saya_ocr::recognize_sync(&state_clone.ocr_engine, &image_data, &ocr_language)?;
+        let text =
+            saya_ocr::recognize_sync(&state_clone.ocr_engine, &image_data, &ocr_language)?;
         Ok::<_, anyhow::Error>(text)
     })
     .await;

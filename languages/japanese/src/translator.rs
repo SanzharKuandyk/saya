@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use saya_translator::{LanguageCode, ProviderMetadata, TranslateError, Translation, Translator};
 
+#[derive(Clone)]
 pub struct JapaneseTranslator {
     client: reqwest::Client,
     api_key: String,

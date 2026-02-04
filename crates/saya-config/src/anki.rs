@@ -16,7 +16,7 @@ fn default_model() -> String {
     "Basic".to_string()
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct AnkiConfig {
     #[serde(default = "default_enabled")]

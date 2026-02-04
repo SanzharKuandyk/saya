@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use saya_config::Config;
 use tokio::sync::RwLock;
@@ -7,6 +8,7 @@ use windows::Media::Ocr::OcrEngine as WinOcrEngine;
 pub struct AppState {
     pub config: Arc<RwLock<Config>>,
     pub ocr_engine: WinOcrEngine,
+    pub auto_ocr_running: AtomicBool,
 }
 
 impl AppState {
@@ -19,6 +21,7 @@ impl AppState {
         Self {
             config: Arc::new(RwLock::new(config)),
             ocr_engine,
+            auto_ocr_running: AtomicBool::new(false),
         }
     }
 }

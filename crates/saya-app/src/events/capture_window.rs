@@ -13,7 +13,7 @@ pub async fn handle_window_capture(
     window_id: Option<u32>,
     app_to_ui_tx: &AsyncSender<AppEvent>,
     processor: &JapaneseProcessor,
-    translator: Option<&JapaneseTranslator>,
+    translator: &Option<JapaneseTranslator>,
 ) -> anyhow::Result<()> {
     let ocr_language = {
         let config = state.config.read().await;

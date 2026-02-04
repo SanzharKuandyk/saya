@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use kanal::{AsyncReceiver, AsyncSender};
+use saya_anki::AnkiConnectClient;
 use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_types::AppEvent;
+use trigger_auto_ocr::start_auto_ocr_loop;
 
 use crate::profile::{save_config, update_config_field};
 use crate::state::AppState;
@@ -10,6 +12,7 @@ use crate::state::AppState;
 pub mod capture_window;
 pub mod create_card;
 pub mod text_input;
+pub mod trigger_auto_ocr;
 pub mod trigger_ocr;
 
 use capture_window::handle_window_capture;
@@ -58,6 +61,8 @@ pub async fn event_loop(
     };
 
     tracing::info!("[EVENT_LOOP] Starting main loop, waiting for events");
+    let processor = Arc::new(processor);
+    let translator = Arc::new(translator);
     loop {
         tracing::info!("[EVENT_LOOP] Calling recv().await...");
         let event = ui_to_app_rx.recv().await?;
@@ -66,13 +71,14 @@ pub async fn event_loop(
             "[EVENT_LOOP] EVENT RECEIVED: {:?}",
             std::mem::discriminant(&event)
         );
+
         handle_events(
             state.clone(),
-            &processor,
-            anki_client.as_ref(),
-            translator.as_ref(),
-            &app_to_ui_tx,
             event,
+            &app_to_ui_tx,
+            &processor,
+            &translator,
+            anki_client.as_ref(),
         )
         .await?;
     }
@@ -80,11 +86,11 @@ pub async fn event_loop(
 
 async fn handle_events(
     state: Arc<AppState>,
-    processor: &JapaneseProcessor,
-    anki_client: Option<&saya_anki::AnkiConnectClient>,
-    translator: Option<&JapaneseTranslator>,
-    app_to_ui_tx: &AsyncSender<AppEvent>,
     event: AppEvent,
+    app_to_ui_tx: &AsyncSender<AppEvent>,
+    processor: &Arc<JapaneseProcessor>,
+    translator: &Arc<Option<JapaneseTranslator>>,
+    anki_client: Option<&AnkiConnectClient>,
 ) -> anyhow::Result<()> {
     tracing::debug!(">>> HANDLING EVENT <<<");
     match event {
@@ -116,6 +122,15 @@ async fn handle_events(
             tracing::debug!(">>> [OCR] Triggered");
 
             handle_ocr_trigger(state, region, app_to_ui_tx, processor, translator).await?;
+        }
+        AppEvent::TriggerAutoOcr(region) => {
+            start_auto_ocr_loop(
+                state,
+                region,
+                app_to_ui_tx.clone(),
+                processor.clone(),
+                translator.clone(),
+            );
         }
         AppEvent::CaptureWindow { window_id } => {
             tracing::debug!(">>> [OCR] CaptureWindow: {:?} <<<", window_id);

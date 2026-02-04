@@ -28,7 +28,7 @@ fn default_ws_url() -> String {
     "ws://localhost:8080".to_string()
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Config {
     pub ui: UiConfig,

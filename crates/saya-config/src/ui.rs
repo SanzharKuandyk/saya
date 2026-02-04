@@ -4,7 +4,7 @@ fn default_max_text_lines() -> u32 {
     3
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct UiConfig {
     #[serde(default = "default_max_text_lines")]

@@ -17,6 +17,7 @@ pub enum AppEvent {
     ShowResults(Vec<DisplayResult>),
     CreateCard(DisplayResult),
     TriggerOcr(CaptureRegion),
+    TriggerAutoOcr(CaptureRegion),
     CaptureWindow {
         window_id: Option<u32>,
     },
