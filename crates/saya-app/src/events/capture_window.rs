@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kanal::AsyncSender;
 use saya_core::language::LanguageProcessor;
-use saya_core::types::{AppEvent, DisplayResult, TextSource};
+use saya_types::{AppEvent, DisplayResult, TextSource};
 use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_translator::Translator;
 

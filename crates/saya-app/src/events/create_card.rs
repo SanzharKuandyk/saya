@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use saya_core::types::DisplayResult;
+use saya_types::DisplayResult;
 
 use crate::AppState;
 

@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
 use kanal::{AsyncReceiver, AsyncSender, Receiver, Sender};
-use saya_core::types::{AppEvent, CaptureRegion, DisplayResult, TextSource, UiEvent};
+use saya_config::Config;
+use saya_types::{AppEvent, CaptureRegion, DisplayResult, TextSource, UiEvent};
+use tokio::sync::RwLock;
 
 slint::include_modules!();
 
 pub async fn ui_loop(
     app_to_ui_rx: AsyncReceiver<AppEvent>,
     ui_to_app_tx: AsyncSender<AppEvent>,
+    config: Arc<RwLock<Config>>,
 ) -> anyhow::Result<()> {
     tracing::info!("UI loop starting");
 
@@ -87,7 +90,6 @@ fn run_slint_ui(
                 if let Some(win) = ocr_weak.upgrade() {
                     let model = std::rc::Rc::new(slint::VecModel::from(titles));
                     win.set_window_list(model.into());
-                    win.set_selected_window_index(-1);
                 }
             }
         });
@@ -167,7 +169,6 @@ fn run_slint_ui(
 
         let model = std::rc::Rc::new(slint::VecModel::from(titles));
         ocr_window.set_window_list(model.into());
-        ocr_window.set_selected_window_index(-1); // Don't auto-select
         tracing::debug!("[SLINT] Auto-populated {} windows", stored_ids.len());
     }
 

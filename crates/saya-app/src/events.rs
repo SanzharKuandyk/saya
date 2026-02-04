@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use kanal::{AsyncReceiver, AsyncSender};
-use saya_core::types::AppEvent;
 use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
+use saya_types::AppEvent;
 
+use crate::profile::{save_config, update_config_field};
 use crate::state::AppState;
 
 pub mod capture_window;
@@ -87,12 +88,25 @@ async fn handle_events(
 ) -> anyhow::Result<()> {
     tracing::debug!(">>> HANDLING EVENT <<<");
     match event {
-        AppEvent::ConfigChanged => {}
+        // DO REALLY NEED CONFIG CHANGED?
+        AppEvent::ConfigChanged => {
+            // ConfigChanged is broadcast to components after updates are processed
+            // Components will handle their specific config changes in their own logic
+        }
+        AppEvent::ConfigUpdate { field, value } => {
+            tracing::info!("Config update: {} = {}", field, value);
+
+            let mut config = state.config.write().await;
+
+            update_config_field(&mut config, &field, &value)?;
+
+            // NEED TO SAVE CONFIG HERE, NEED TO PROPERLY think about this
+        }
         AppEvent::UiEvent(_event) => {}
         AppEvent::ApiRequest(_event) => {}
         AppEvent::ShowResults(_) => {}
         AppEvent::RawTextInput { text: _, source: _ } => {
-            // RawTextInput events are handled by the UI layer, no processing needed here
+            // RawTextInput events are handled by UI layer, no processing needed here
         }
         AppEvent::CreateCard(result) => {
             // Anki Card Creation

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use kanal::AsyncSender;
-use saya_core::types::{AppEvent, CaptureRegion, TextSource};
+use saya_types::{AppEvent, CaptureRegion, TextSource};
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;

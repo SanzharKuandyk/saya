@@ -2,7 +2,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
-use saya_core::types::AppEvent;
+use saya_types::AppEvent;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
 use tokio_util_watchdog::Watchdog;
@@ -75,7 +75,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let ui = spawn_with_cancel(
         "ui_loop",
         cancel.clone(),
-        ui_loop(app_to_ui_rx, event_tx.clone()),
+        ui_loop(app_to_ui_rx, event_tx.clone(), state.config.clone()),
     );
 
     let watcher = {

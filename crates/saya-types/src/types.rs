@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     ConfigChanged,
+    ConfigUpdate {
+        field: String,
+        value: String,
+    },
     UiEvent(UiEvent),
     ApiRequest(ApiRequest),
     TextInput(String),

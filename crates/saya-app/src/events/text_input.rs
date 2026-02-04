@@ -1,6 +1,6 @@
 use kanal::AsyncSender;
 use saya_core::language::LanguageProcessor;
-use saya_core::types::{AppEvent, DisplayResult};
+use saya_types::{AppEvent, DisplayResult};
 use saya_lang_japanese::JapaneseProcessor;
 
 pub async fn handle_text_input(

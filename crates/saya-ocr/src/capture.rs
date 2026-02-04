@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use saya_core::types::CaptureRegion;
+use saya_types::CaptureRegion;
 use xcap::{Monitor, Window};
 
 #[allow(dead_code)]

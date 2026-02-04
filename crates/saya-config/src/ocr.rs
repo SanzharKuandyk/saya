@@ -1,4 +1,4 @@
-use saya_core::types::CaptureRegion;
+use saya_types::types::CaptureRegion;
 use serde::{Deserialize, Serialize};
 
 fn default_enabled() -> bool {

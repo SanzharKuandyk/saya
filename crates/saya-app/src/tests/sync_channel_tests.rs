@@ -1,4 +1,4 @@
-use saya_core::types::{AppEvent, CaptureRegion};
+use saya_types::{AppEvent, CaptureRegion};
 use std::time::Duration;
 use tokio::time::timeout;
 

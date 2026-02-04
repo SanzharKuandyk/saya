@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kanal::unbounded_async;
-use saya_core::types::{AppEvent, CaptureRegion};
+use saya_types::{AppEvent, CaptureRegion};
 use saya_ocr::{capture_screen_region, init_ocr_engine, recognize_sync};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
@@ -251,7 +251,7 @@ async fn test_real_ocr_performance() {
 /// Test 11: Simulate actual app flow - spawn_blocking -> send event -> receive event
 #[tokio::test]
 async fn test_app_event_flow_simulation() {
-    use saya_core::types::AppEvent;
+    use saya_types::AppEvent;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     let (tx, rx) = unbounded_async::<AppEvent>();
@@ -319,7 +319,7 @@ async fn test_app_event_flow_simulation() {
 /// This simulates what the real app does
 #[tokio::test]
 async fn test_spawn_local_simulation() {
-    use saya_core::types::AppEvent;
+    use saya_types::AppEvent;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     let (tx, rx) = unbounded_async::<AppEvent>();

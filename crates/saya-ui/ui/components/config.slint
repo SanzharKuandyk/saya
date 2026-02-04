@@ -1,0 +1,441 @@
+import { 
+    VerticalBox, 
+    HorizontalBox, 
+    ScrollView, 
+    Button, 
+    CheckBox, 
+    LineEdit, 
+    SpinBox,
+    ComboBox,
+    TabWidget
+} from "std-widgets.slint";
+
+export component ConfigWindow inherits Window {
+    title: "Saya - Configuration";
+    always-on-top: true;
+    
+    callback config-updated(string, string);
+    callback close-window();
+    
+    // UI Config Properties
+    in-out property <int> max-text-lines: 3;
+    
+    // OCR Config Properties
+    in-out property <bool> ocr-enabled: true;
+    in-out property <string> ocr-language: "ja";
+    in-out property <int> ocr-region-x: 100;
+    in-out property <int> ocr-region-y: 100;
+    in-out property <int> ocr-region-width: 600;
+    in-out property <int> ocr-region-height: 400;
+    in-out property <string> ocr-target-window: "";
+    
+    // Anki Config Properties
+    in-out property <bool> anki-enabled: true;
+    in-out property <string> anki-url: "http://localhost:8765";
+    in-out property <string> anki-deck: "Japanese";
+    in-out property <string> anki-model: "Basic";
+    
+    // Dictionary Config Properties
+    in-out property <bool> dictionary-enabled: true;
+    in-out property <string> dictionary-paths: "";
+    
+    // Translator Config Properties
+    in-out property <bool> translator-enabled: true;
+    in-out property <string> translator-provider: "google";
+    in-out property <string> translator-from-lang: "ja";
+    in-out property <string> translator-to-lang: "en";
+    in-out property <string> translator-api-key: "";
+    in-out property <string> translator-api-url: "";
+    
+    // Global Config Properties
+    in-out property <int> watchdog-timeout: 10000;
+    in-out property <int> delta-time: 100;
+    in-out property <int> timeout-seconds: 30;
+    in-out property <bool> listen-to-ws: false;
+    in-out property <string> ws-url: "ws://localhost:8080";
+
+    preferred-width: 800px;
+    preferred-height: 700px;
+    background: #1e1e1eee;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header
+        HorizontalBox {
+            Text {
+                text: "Saya Configuration";
+                font-size: 24px;
+                font-weight: 700;
+                color: #ffffff;
+                horizontal-stretch: 1;
+            }
+            
+            Button {
+                text: "Close";
+                clicked => { root.close-window(); }
+            }
+        }
+
+        // Configuration Tabs
+        TabWidget {
+            height: 550px;
+            
+            Tab {
+                title: "Interface";
+                
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+                    
+                    Rectangle {
+                        background: #2d2d2d;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 12px;
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Max text lines in results:";
+                                    vertical-alignment: center;
+                                    width: 200px;
+                                }
+                                SpinBox {
+                                    value: root.max-text-lines;
+                                    minimum: 1;
+                                    maximum: 10;
+                                    edited => { 
+                                        root.config-updated("ui.max_text_lines", self.value);
+                                        root.max-text-lines = self.value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "OCR";
+                
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+                    
+                    Rectangle {
+                        background: #2d2d2d;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 12px;
+                            
+                            HorizontalBox {
+                                CheckBox {
+                                    text: "Enable OCR";
+                                    checked: root.ocr-enabled;
+                                    toggled => {
+                                        root.config-updated("ocr.enabled", self.checked ? "true" : "false");
+                                        root.ocr-enabled = self.checked;
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    Text {
+                                        text: "Language:";
+                                        vertical-alignment: center;
+                                        width: 80px;
+                                    }
+                                    ComboBox {
+                                        model: ["ja", "en", "zh"];
+                                        current-index: root.ocr-language == "ja" ? 0 : root.ocr-language == "en" ? 1 : 2;
+                                        selected(text) => {
+                                            let lang = text == "Japanese" ? "ja" : text == "English" ? "en" : "zh";
+                                            root.config-updated("ocr.language", lang);
+                                            root.ocr-language = lang;
+                                        }
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    Text {
+                                        text: "Capture Region:";
+                                        vertical-alignment: center;
+                                        width: 200px;
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    SpinBox {
+                                        value: root.ocr-region-x;
+                                        minimum: 0;
+                                        maximum: 5000;
+                                        edited => { 
+                                            root.config-updated("ocr.capture_region.x", self.value);
+                                            root.ocr-region-x = self.value;
+                                        }
+                                    }
+                                    Text {
+                                        text: "x";
+                                        vertical-alignment: center;
+                                    }
+                                    SpinBox {
+                                        value: root.ocr-region-y;
+                                        minimum: 0;
+                                        maximum: 5000;
+                                        edited => { 
+                                            root.config-updated("ocr.capture_region.y", self.value);
+                                            root.ocr-region-y = self.value;
+                                        }
+                                    }
+                                    Text {
+                                        text: "y";
+                                        vertical-alignment: center;
+                                    }
+                                    SpinBox {
+                                        value: root.ocr-region-width;
+                                        minimum: 100;
+                                        maximum: 2000;
+                                        edited => { 
+                                            root.config-updated("ocr.capture_region.width", self.value);
+                                            root.ocr-region-width = self.value;
+                                        }
+                                    }
+                                    Text {
+                                        text: "width";
+                                        vertical-alignment: center;
+                                    }
+                                    SpinBox {
+                                        value: root.ocr-region-height;
+                                        minimum: 100;
+                                        maximum: 2000;
+                                        edited => { 
+                                            root.config-updated("ocr.capture_region.height", self.value);
+                                            root.ocr-region-height = self.value;
+                                        }
+                                    }
+                                    Text {
+                                        text: "height";
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    Text {
+                                        text: "Target Window (optional):";
+                                        vertical-alignment: center;
+                                        width: 180px;
+                                    }
+                                    LineEdit {
+                                        text: root.ocr-target-window;
+                                        edited => {
+                                            root.config-updated("ocr.target_window", self.text);
+                                            root.ocr-target-window = self.text;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "Dictionary";
+                
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+                    
+                    Rectangle {
+                        background: #2d2d2d;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 12px;
+                            
+                            CheckBox {
+                                text: "Enable Dictionary";
+                                checked: root.dictionary-enabled;
+                                toggled => {
+                                    root.config-updated("dictionary.enabled", self.checked ? "true" : "false");
+                                    root.dictionary-enabled = self.checked;
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Additional Dictionary Paths:";
+                                    vertical-alignment: top;
+                                    width: 200px;
+                                }
+                                LineEdit {
+                                    text: root.dictionary-paths;
+                                    placeholder-text: "comma-separated paths";
+                                    edited => {
+                                        root.config-updated("dictionary.additional_paths", self.text);
+                                        root.dictionary-paths = self.text;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "Anki Integration";
+                
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+                    
+                    Rectangle {
+                        background: #2d2d2d;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 12px;
+                            
+                            CheckBox {
+                                text: "Enable Anki Integration";
+                                checked: root.anki-enabled;
+                                toggled => {
+                                    root.config-updated("anki.enabled", self.checked ? "true" : "false");
+                                    root.anki-enabled = self.checked;
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Anki Connect URL:";
+                                    vertical-alignment: center;
+                                    width: 140px;
+                                }
+                                LineEdit {
+                                    text: root.anki-url;
+                                    edited => {
+                                        root.config-updated("anki.url", self.text);
+                                        root.anki-url = self.text;
+                                    }
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Default Deck:";
+                                    vertical-alignment: center;
+                                    width: 140px;
+                                }
+                                LineEdit {
+                                    text: root.anki-deck;
+                                    edited => {
+                                        root.config-updated("anki.deck", self.text);
+                                        root.anki-deck = self.text;
+                                    }
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Default Model:";
+                                    vertical-alignment: center;
+                                    width: 140px;
+                                }
+                                LineEdit {
+                                    text: root.anki-model;
+                                    edited => {
+                                        root.config-updated("anki.model", self.text);
+                                        root.anki-model = self.text;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "Advanced";
+                
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+                    
+                    Rectangle {
+                        background: #2d2d2d;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 12px;
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Watchdog Timeout (ms):";
+                                    vertical-alignment: center;
+                                    width: 180px;
+                                }
+                                SpinBox {
+                                    value: root.watchdog-timeout;
+                                    minimum: 1000;
+                                    maximum: 60000;
+                                    edited => {
+                                        root.config-updated("watchdog_timeout_ms", self.value);
+                                        root.watchdog-timeout = self.value;
+                                    }
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "Delta Time (ms):";
+                                    vertical-alignment: center;
+                                    width: 180px;
+                                }
+                                SpinBox {
+                                    value: root.delta-time;
+                                    minimum: 10;
+                                    maximum: 1000;
+                                    edited => {
+                                        root.config-updated("delta_time", self.value);
+                                        root.delta-time = self.value;
+                                    }
+                                }
+                            }
+                            
+                            CheckBox {
+                                text: "Listen to WebSocket";
+                                checked: root.listen-to-ws;
+                                toggled => {
+                                    root.config-updated("listen_to_ws", self.checked ? "true" : "false");
+                                    root.listen-to-ws = self.checked;
+                                }
+                            }
+                            
+                            HorizontalBox {
+                                Text {
+                                    text: "WebSocket URL:";
+                                    vertical-alignment: center;
+                                    width: 180px;
+                                }
+                                LineEdit {
+                                    text: root.ws-url;
+                                    edited => {
+                                        root.config-updated("ws_url", self.text);
+                                        root.ws-url = self.text;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

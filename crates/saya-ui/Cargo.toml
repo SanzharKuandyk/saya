@@ -9,8 +9,9 @@ kanal.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
-saya-core = { path = "../saya-core" }
+saya-types = { path = "../saya-types" }
 saya-ocr = { path = "../saya-ocr" }
+saya-config = { path = "../saya-config/" }
 
 [build-dependencies]
 slint-build = "1.14.1"

@@ -10,6 +10,12 @@ export struct DictResult {
     conjugation: string,
 }
 
+export struct RawTextEntry {
+    text: string,
+    source: string,
+    timestamp: string,
+}
+
 export component OverlayWindow inherits Window {
     title: "Saya";
     always-on-top: true;
