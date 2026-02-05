@@ -12,6 +12,7 @@ pub mod events;
 pub mod io;
 pub mod profile;
 pub mod state;
+pub mod status;
 pub mod ui;
 
 #[cfg(test)]
@@ -82,7 +83,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
         spawn_with_cancel("watcher", cancel.clone(), async move {
             let delta_time = {
                 let cfg = state.config.read().await;
-                Duration::from_millis(cfg.delta_time)
+                Duration::from_millis(cfg.watcher_interval_ms)
             };
             watcher_io(state, delta_time, cancel_child, app_to_ui_tx).await
         })

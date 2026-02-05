@@ -20,6 +20,18 @@ fn default_delta_time() -> u64 {
     100
 }
 
+fn default_hotkey_poll_interval_ms() -> u64 {
+    50
+}
+
+fn default_auto_ocr_interval_ms() -> u64 {
+    3000
+}
+
+fn default_watcher_interval_ms() -> u64 {
+    100
+}
+
 fn default_timeout_seconds() -> i32 {
     30
 }
@@ -39,14 +51,20 @@ pub struct Config {
 
     #[serde(default = "default_watchdog_timeout_ms")]
     pub watchdog_timeout_ms: u64,
-    #[serde(default = "default_delta_time")]
-    pub delta_time: u64,
+    #[serde(default = "default_hotkey_poll_interval_ms")]
+    pub hotkey_poll_interval_ms: u64,
+    #[serde(default = "default_auto_ocr_interval_ms")]
+    pub auto_ocr_interval_ms: u64,
+    #[serde(default = "default_watcher_interval_ms")]
+    pub watcher_interval_ms: u64,
     #[serde(default = "default_timeout_seconds")]
     pub timeout_seconds: i32,
     #[serde(default)]
     pub listen_to_ws: bool,
     #[serde(default = "default_ws_url")]
     pub ws_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delta_time: Option<u64>,
 }
 
 impl Default for Config {
@@ -58,10 +76,13 @@ impl Default for Config {
             dictionary: DictionaryConfig::default(),
             translator: TranslatorConfig::default(),
             watchdog_timeout_ms: default_watchdog_timeout_ms(),
-            delta_time: default_delta_time(),
+            hotkey_poll_interval_ms: default_hotkey_poll_interval_ms(),
+            auto_ocr_interval_ms: default_auto_ocr_interval_ms(),
+            watcher_interval_ms: default_watcher_interval_ms(),
             timeout_seconds: default_timeout_seconds(),
             listen_to_ws: false,
             ws_url: default_ws_url(),
+            delta_time: None,
         }
     }
 }

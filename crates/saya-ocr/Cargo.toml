@@ -17,6 +17,7 @@ windows = { version = "0.62.2", features = [
     "Graphics_Imaging",
     "Media_Ocr",
     "Globalization",
+    "Win32_System_Com",
 ] }
 xcap = "0.0.14"
 global-hotkey = "0.6"
