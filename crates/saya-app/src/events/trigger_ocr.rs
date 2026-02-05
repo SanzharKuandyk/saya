@@ -1,22 +1,19 @@
-use std::sync::Arc;
-
-use kanal::AsyncSender;
 use saya_core::language::LanguageProcessor;
-use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_translator::Translator;
 use saya_types::{AppEvent, CaptureRegion, DisplayResult, TextSource};
 
-use crate::AppState;
+use crate::ocr_context::OcrContext;
 
 /// handles ocr and loops it if ocr.auto is enabled
 pub async fn handle_ocr_trigger(
-    state: Arc<AppState>,
+    ctx: &OcrContext,
     region: CaptureRegion,
-    app_to_ui_tx: &AsyncSender<AppEvent>,
-    processor: &JapaneseProcessor,
-    translator: &Option<JapaneseTranslator>,
     auto: bool,
 ) -> anyhow::Result<()> {
+    let state = &ctx.state;
+    let app_to_ui_tx = &ctx.event_tx;
+    let processor = &ctx.processor;
+    let translator = &ctx.translator;
     let ocr_language = {
         let config = state.config.read().await;
         config.ocr.language.clone()
@@ -31,13 +28,7 @@ pub async fn handle_ocr_trigger(
 
     let state_clone = state.clone();
     let result = tokio::task::spawn_blocking(move || {
-        unsafe {
-            windows::Win32::System::Com::CoInitializeEx(
-                Some(std::ptr::null()),
-                windows::Win32::System::Com::COINIT_MULTITHREADED,
-            )
-        }
-        .ok()?;
+        let _com = saya_ocr::ComGuard::initialize()?;
 
         let image_data = saya_ocr::capture_screen_region(region)?;
         let text = saya_ocr::recognize_sync(&state_clone.ocr_engine, &image_data, &ocr_language)?;
@@ -87,7 +78,7 @@ pub async fn handle_ocr_trigger(
                 }
 
                 // Translation
-                if let Some(t) = translator {
+                if let Some(t) = (**translator).as_ref() {
                     let config = state.config.read().await;
                     let from = config.translator.from_lang.clone();
                     let to = config.translator.to_lang.clone();

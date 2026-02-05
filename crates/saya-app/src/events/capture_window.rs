@@ -1,20 +1,17 @@
-use std::sync::Arc;
-
-use kanal::AsyncSender;
 use saya_core::language::LanguageProcessor;
 use saya_types::{AppEvent, DisplayResult, TextSource};
-use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_translator::Translator;
 
-use crate::AppState;
+use crate::ocr_context::OcrContext;
 
 pub async fn handle_window_capture(
-    state: Arc<AppState>,
+    ctx: &OcrContext,
     window_id: Option<u32>,
-    app_to_ui_tx: &AsyncSender<AppEvent>,
-    processor: &JapaneseProcessor,
-    translator: &Option<JapaneseTranslator>,
 ) -> anyhow::Result<()> {
+    let state = &ctx.state;
+    let app_to_ui_tx = &ctx.event_tx;
+    let processor = &ctx.processor;
+    let translator = &ctx.translator;
     let ocr_language = {
         let config = state.config.read().await;
         config.ocr.language.clone()
@@ -22,13 +19,7 @@ pub async fn handle_window_capture(
 
     let state_clone = state.clone();
     let result = tokio::task::spawn_blocking(move || {
-        unsafe {
-            windows::Win32::System::Com::CoInitializeEx(
-                Some(std::ptr::null()),
-                windows::Win32::System::Com::COINIT_MULTITHREADED,
-            )
-        }
-        .ok()?;
+        let _com = saya_ocr::ComGuard::initialize()?;
 
         let image_data = if let Some(id) = window_id {
             tracing::debug!(">>> [OCR] Capturing window {}", id);
@@ -86,7 +77,7 @@ pub async fn handle_window_capture(
                 }
 
                 // Translation
-                if let Some(t) = translator {
+                if let Some(t) = (**translator).as_ref() {
                     let config = state.config.read().await;
                     let from = config.translator.from_lang.clone();
                     let to = config.translator.to_lang.clone();

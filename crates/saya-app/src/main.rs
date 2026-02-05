@@ -10,6 +10,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod events;
 pub mod io;
+pub mod ocr_context;
 pub mod profile;
 pub mod state;
 pub mod status;

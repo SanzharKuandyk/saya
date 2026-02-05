@@ -23,7 +23,7 @@ pub async fn watcher_io(
         tracing::info!("Backend ready signal sent");
     });
 
-    let (listen_to_ws, ocr_enabled, ocr_language, ocr_region, target_window) = {
+    let (listen_to_ws, ocr_enabled, ocr_language, ocr_region, target_window, hotkey_poll_interval_ms) = {
         let config = state.config.read().await;
         (
             config.listen_to_ws,
@@ -31,6 +31,7 @@ pub async fn watcher_io(
             config.ocr.language.clone(),
             config.ocr.capture_region,
             config.ocr.target_window.clone(),
+            config.hotkey_poll_interval_ms,
         )
     };
 
@@ -106,14 +107,7 @@ pub async fn watcher_io(
                         // Run OCR in spawn_blocking
                         let state_ref = state_for_task; // Arc<AppState> owns engine here
                         let result = tokio::task::spawn_blocking(move || {
-                            // Initialize COM for this thread
-                            unsafe {
-                                windows::Win32::System::Com::CoInitializeEx(
-                                    Some(std::ptr::null()),
-                                    windows::Win32::System::Com::COINIT_MULTITHREADED,
-                                )
-                            }
-                            .ok()?;
+                            let _com = saya_ocr::ComGuard::initialize()?;
 
                             let image_data = saya_ocr::capture_screen_region(region)?;
                             let text = saya_ocr::recognize_sync(
@@ -159,7 +153,7 @@ pub async fn watcher_io(
                     });
                 }
 
-                std::thread::sleep(std::time::Duration::from_millis(50));
+                std::thread::sleep(std::time::Duration::from_millis(hotkey_poll_interval_ms));
             }
 
             tracing::debug!(">>> [OCR] Hotkey listener stopped");

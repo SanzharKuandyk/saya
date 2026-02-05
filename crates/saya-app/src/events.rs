@@ -6,6 +6,7 @@ use saya_lang_japanese::{JapaneseProcessor, JapaneseTranslator};
 use saya_types::AppEvent;
 use trigger_auto_ocr::start_auto_ocr_loop;
 
+use crate::ocr_context::OcrContext;
 use crate::profile::{save_config, update_config_field};
 use crate::state::AppState;
 
@@ -63,6 +64,15 @@ pub async fn event_loop(
     tracing::info!("[EVENT_LOOP] Starting main loop, waiting for events");
     let processor = Arc::new(processor);
     let translator = Arc::new(translator);
+
+    // Create OcrContext once for all OCR operations
+    let ocr_ctx = OcrContext::new(
+        state.clone(),
+        app_to_ui_tx.clone(),
+        processor.clone(),
+        translator.clone(),
+    );
+
     loop {
         tracing::info!("[EVENT_LOOP] Calling recv().await...");
         let event = ui_to_app_rx.recv().await?;
@@ -79,6 +89,7 @@ pub async fn event_loop(
             &processor,
             &translator,
             anki_client.as_ref(),
+            &ocr_ctx,
         )
         .await?;
     }
@@ -91,6 +102,7 @@ async fn handle_events(
     processor: &Arc<JapaneseProcessor>,
     translator: &Arc<Option<JapaneseTranslator>>,
     anki_client: Option<&AnkiConnectClient>,
+    ocr_ctx: &OcrContext,
 ) -> anyhow::Result<()> {
     tracing::debug!(">>> HANDLING EVENT <<<");
     match event {
@@ -103,10 +115,13 @@ async fn handle_events(
             tracing::info!("Config update: {} = {}", field, value);
 
             let mut config = state.config.write().await;
-
             update_config_field(&mut config, &field, &value)?;
 
-            // NEED TO SAVE CONFIG HERE, NEED TO PROPERLY think about this
+            // Persist config to disk
+            save_config(config.clone(), "main")?;
+
+            // Broadcast config change to components
+            app_to_ui_tx.send(AppEvent::ConfigChanged).await?;
         }
         AppEvent::UiEvent(_event) => {}
         AppEvent::ApiRequest(_event) => {}
@@ -121,21 +136,15 @@ async fn handle_events(
         AppEvent::TriggerOcr(region) => {
             tracing::debug!(">>> [OCR] Triggered");
 
-            handle_ocr_trigger(state, region, app_to_ui_tx, processor, translator, false).await?;
+            handle_ocr_trigger(ocr_ctx, region, false).await?;
         }
         AppEvent::TriggerAutoOcr(region) => {
-            start_auto_ocr_loop(
-                state,
-                region,
-                app_to_ui_tx.clone(),
-                processor.clone(),
-                translator.clone(),
-            );
+            start_auto_ocr_loop(ocr_ctx, region);
         }
         AppEvent::CaptureWindow { window_id } => {
             tracing::debug!(">>> [OCR] CaptureWindow: {:?} <<<", window_id);
 
-            handle_window_capture(state, window_id, app_to_ui_tx, processor, translator).await?;
+            handle_window_capture(ocr_ctx, window_id).await?;
         }
         AppEvent::OcrStatusUpdate { status, capturing } => {
             tracing::info!("OCR status: {} (capturing: {})", status, capturing);
