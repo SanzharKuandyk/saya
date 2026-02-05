@@ -121,7 +121,7 @@ async fn handle_events(
         AppEvent::TriggerOcr(region) => {
             tracing::debug!(">>> [OCR] Triggered");
 
-            handle_ocr_trigger(state, region, app_to_ui_tx, processor, translator).await?;
+            handle_ocr_trigger(state, region, app_to_ui_tx, processor, translator, false).await?;
         }
         AppEvent::TriggerAutoOcr(region) => {
             start_auto_ocr_loop(

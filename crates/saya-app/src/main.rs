@@ -64,8 +64,6 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let (app_to_ui_tx, app_to_ui_rx) = kanal::unbounded_async::<AppEvent>();
     let (ui_to_app_tx, ui_to_app_rx) = kanal::unbounded_async::<AppEvent>();
 
-    let event_tx = ui_to_app_tx.clone();
-
     let event_loop = spawn_with_cancel(
         "event_loop",
         cancel.clone(),
@@ -75,7 +73,7 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
     let ui = spawn_with_cancel(
         "ui_loop",
         cancel.clone(),
-        ui_loop(app_to_ui_rx, event_tx.clone(), state.config.clone()),
+        ui_loop(app_to_ui_rx, ui_to_app_tx.clone(), state.config.clone()),
     );
 
     let watcher = {

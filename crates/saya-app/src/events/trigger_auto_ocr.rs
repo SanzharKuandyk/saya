@@ -45,6 +45,7 @@ pub fn start_auto_ocr_loop(
                 &tx_clone,
                 &processor_clone,
                 &translator_clone,
+                true,
             )
             .await;
 

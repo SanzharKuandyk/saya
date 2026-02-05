@@ -14,7 +14,8 @@ pub async fn handle_ocr_trigger(
     region: CaptureRegion,
     app_to_ui_tx: &AsyncSender<AppEvent>,
     processor: &JapaneseProcessor,
-    translator: &Option<JapaneseTranslator>
+    translator: &Option<JapaneseTranslator>,
+    auto: bool,
 ) -> anyhow::Result<()> {
     let ocr_language = {
         let config = state.config.read().await;
@@ -39,8 +40,7 @@ pub async fn handle_ocr_trigger(
         .ok()?;
 
         let image_data = saya_ocr::capture_screen_region(region)?;
-        let text =
-            saya_ocr::recognize_sync(&state_clone.ocr_engine, &image_data, &ocr_language)?;
+        let text = saya_ocr::recognize_sync(&state_clone.ocr_engine, &image_data, &ocr_language)?;
         Ok::<_, anyhow::Error>(text)
     })
     .await;
@@ -112,14 +112,14 @@ pub async fn handle_ocr_trigger(
                 let _ = app_to_ui_tx
                     .send(AppEvent::OcrStatusUpdate {
                         status: "Ready".to_string(),
-                        capturing: false,
+                        capturing: auto,
                     })
                     .await;
             } else {
                 let _ = app_to_ui_tx
                     .send(AppEvent::OcrStatusUpdate {
                         status: "No text found".to_string(),
-                        capturing: false,
+                        capturing: auto,
                     })
                     .await;
             }

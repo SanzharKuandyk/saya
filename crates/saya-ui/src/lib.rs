@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use events::handle_events;
 use kanal::{AsyncReceiver, AsyncSender, Receiver, Sender};
 use saya_config::Config;
-use saya_types::{AppEvent, CaptureRegion, DisplayResult, TextSource, UiEvent};
+use saya_types::{AppEvent, CaptureRegion, DisplayResult};
 use tokio::sync::RwLock;
+
+pub mod events;
 
 slint::include_modules!();
 
@@ -17,7 +20,8 @@ pub async fn ui_loop(
     let (sync_tx, sync_rx) = kanal::unbounded::<AppEvent>();
     let (app_sync_tx, app_sync_rx) = kanal::unbounded::<AppEvent>();
 
-    let ui_thread = std::thread::spawn(move || run_slint_ui(sync_tx, app_sync_rx));
+    let config = config.read().await.clone();
+    let ui_thread = std::thread::spawn(move || run_slint_ui(sync_tx, app_sync_rx, &config));
 
     let forward_to_ui = tokio::spawn({
         async move {
@@ -58,6 +62,7 @@ pub async fn ui_loop(
 fn run_slint_ui(
     ui_to_app_tx: Sender<AppEvent>,
     app_to_ui_rx: Receiver<AppEvent>,
+    config: &Config,
 ) -> anyhow::Result<()> {
     tracing::info!("[SLINT] UI thread starting");
 
@@ -66,6 +71,9 @@ fn run_slint_ui(
 
     let ocr_window = OcrWindow::new()?;
     let ocr_window_weak = ocr_window.as_weak();
+    let ocr_auto = config.ocr.auto;
+
+    ocr_window.set_auto_capturing_mode(ocr_auto);
 
     tracing::debug!("[SLINT] UI windows created");
 
@@ -149,7 +157,7 @@ fn run_slint_ui(
                     height: green_height,
                 };
 
-                let _ = send_capture_region(region, tx.clone());
+                let _ = send_capture_region(region, tx.clone(), ocr_auto);
             }
         });
     }
@@ -173,7 +181,7 @@ fn run_slint_ui(
     ocr_window.show()?;
     tracing::debug!("[SLINT] OCR window shown");
 
-    let results_store = Arc::new(std::sync::Mutex::new(Vec::<DisplayResult>::new()));
+    let results_store = Arc::new(Mutex::new(Vec::<DisplayResult>::new()));
 
     {
         let results_clone = results_store.clone();
@@ -203,95 +211,8 @@ fn run_slint_ui(
                 let ocr_weak = ocr_weak.clone();
                 let results_store = results_store.clone();
 
-                let _ = slint::invoke_from_event_loop(move || match event {
-                    AppEvent::UiEvent(UiEvent::Show) => {
-                        if let Some(w) = window_weak.upgrade() {
-                            let _ = w.show();
-                            tracing::debug!("[SLINT] Overlay shown");
-                        }
-                    }
-                    AppEvent::UiEvent(UiEvent::Hide) => {
-                        if let Some(w) = window_weak.upgrade() {
-                            let _ = w.hide();
-                            tracing::debug!("[SLINT] Overlay hidden");
-                        }
-                    }
-                    AppEvent::UiEvent(UiEvent::Close) => {
-                        if let Some(w) = window_weak.upgrade() {
-                            let _ = w.hide();
-                        }
-                        slint::quit_event_loop().ok();
-                    }
-                    AppEvent::RawTextInput { text, source } => {
-                        if let Some(w) = window_weak.upgrade() {
-                            let source_str = match source {
-                                TextSource::Ocr => "OCR",
-                                TextSource::Clipboard => "Clipboard",
-                                TextSource::Websocket => "WebSocket",
-                                TextSource::Manual => "Manual",
-                            };
-                            tracing::debug!(
-                                "[SLINT] Hooked text from {}: {} chars",
-                                source_str,
-                                text.len()
-                            );
-                            w.set_hooked_text(text.into());
-                            w.set_text_source(source_str.into());
-                            w.show().ok();
-                        }
-                    }
-                    AppEvent::ShowResults(results) => {
-                        if let Some(w) = window_weak.upgrade() {
-                            tracing::debug!("[SLINT] Showing {} results", results.len());
-                            *results_store.lock().unwrap() = results.clone();
-
-                            let slint_results: Vec<DictResult> = results
-                                .into_iter()
-                                .map(|r| DictResult {
-                                    term: r.term.into(),
-                                    reading: r.reading.into(),
-                                    definition: r.definition.into(),
-                                    frequency: r.frequency.unwrap_or_default().into(),
-                                    pitch_accent: r.pitch_accent.unwrap_or_default().into(),
-                                    jlpt_level: r.jlpt_level.unwrap_or_default().into(),
-                                    conjugation: r.conjugation.unwrap_or_default().into(),
-                                })
-                                .collect();
-
-                            let model = std::rc::Rc::new(slint::VecModel::from(slint_results));
-                            w.set_results(model.into());
-                            w.show().ok();
-                        }
-                    }
-                    AppEvent::OcrStatusUpdate { status, capturing } => {
-                        if let Some(w) = ocr_weak.upgrade() {
-                            tracing::debug!(
-                                "[SLINT] OCR status: {} (capturing: {})",
-                                status,
-                                capturing
-                            );
-                            w.set_status(status.into());
-                            w.set_is_capturing(capturing);
-                        }
-                    }
-                    AppEvent::BackendReady => {
-                        if let Some(w) = ocr_weak.upgrade() {
-                            tracing::debug!("[SLINT] Backend ready");
-                            w.set_is_ready(true);
-                            w.set_status("Ready".into());
-                        }
-                    }
-                    AppEvent::ShowTranslation {
-                        text,
-                        from_lang,
-                        to_lang,
-                    } => {
-                        if let Some(w) = window_weak.upgrade() {
-                            tracing::debug!("[SLINT] Translation: {} -> {}", from_lang, to_lang);
-                            w.set_translation(text.into());
-                        }
-                    }
-                    _ => {}
+                let _ = slint::invoke_from_event_loop(move || {
+                    handle_events(event, window_weak, ocr_weak, &results_store);
                 });
             }
             tracing::info!("[SLINT-RX] Event receiver thread stopped");
@@ -307,9 +228,18 @@ fn run_slint_ui(
     Ok(())
 }
 
-pub fn send_capture_region(region: CaptureRegion, tx: Sender<AppEvent>) -> anyhow::Result<()> {
-    match tx.send(AppEvent::TriggerAutoOcr(region)) {
-        Ok(_) => tracing::info!("[SLINT] TriggerOcr sent"),
+pub fn send_capture_region(
+    region: CaptureRegion,
+    tx: Sender<AppEvent>,
+    auto: bool,
+) -> anyhow::Result<()> {
+    let event = if auto {
+        AppEvent::TriggerAutoOcr(region)
+    } else {
+        AppEvent::TriggerOcr(region)
+    };
+    match tx.send(event) {
+        Ok(_) => tracing::info!("[SLINT] Capture Region is sent"),
         Err(e) => tracing::error!("[SLINT] Send failed: {}", e),
     }
 

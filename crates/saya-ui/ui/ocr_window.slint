@@ -8,11 +8,28 @@ export component OcrWindow inherits Window {
     callback refresh-windows();
     callback window-selected(int);
 
-    in-out property <string> status: "Initializing...";
-    in-out property <bool> is-capturing: false;
-    in-out property <bool> is-ready: false;
-    in-out property <[string]> window-list: [];
-    in-out property <int> selected-window-index: -1;
+    in-out property<string> status: "Initializing...";
+    in-out property<bool> is-capturing: false;
+    in-out property<bool> is-ready: false;
+    in-out property<bool> auto-capturing-mode: false;
+    in-out property<[string]> window-list: [];
+    in-out property<int> selected-window-index: -1;
+
+    function button_text() -> string {
+        if (!is-ready) {
+            return "Preparing...";
+        }
+
+        if (is-capturing) {
+            return "...";
+        }
+
+        if (auto-capturing-mode) {
+            return "Start capturing loop";
+        }
+
+        return "Capture";
+    }
 
     preferred-width: 400px;
     preferred-height: 200px;
@@ -23,7 +40,6 @@ export component OcrWindow inherits Window {
         padding: 8px;
         spacing: 8px;
 
-        // Capture region indicator (empty green box)
         Rectangle {
             background: #00ff0022;
             border-color: #00ff00;
@@ -31,13 +47,10 @@ export component OcrWindow inherits Window {
             border-radius: 4px;
         }
 
-        // Simple capture button at bottom
         Button {
-            text: !is-ready ? "..." : is-capturing ? "..." : "Capture";
+            text: button_text();
             enabled: is-ready && !is-capturing;
-            clicked => {
-                root.capture-clicked();
-            }
+            clicked => capture-clicked();
         }
     }
 }
