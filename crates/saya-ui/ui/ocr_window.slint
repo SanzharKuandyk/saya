@@ -9,6 +9,7 @@ export component OcrWindow inherits Window {
     callback refresh-windows();
     callback window-selected(int);
     callback toggle-auto-mode();
+    callback window-resized();
 
     in-out property<string> status: "Initializing...";
     in-out property<bool> is-capturing: false;
@@ -117,6 +118,115 @@ export component OcrWindow inherits Window {
                         clicked => capture-clicked();
                     }
                 }
+            }
+        }
+
+        // Resize handles (4 corners)
+        // Bottom-right resize handle
+        TouchArea {
+            width: 16px;
+            height: 16px;
+            x: parent.width - 16px;
+            y: parent.height - 16px;
+            mouse-cursor: nwse-resize;
+
+            moved => {
+                if (self.pressed) {
+                    root.width = max(root.min-width, root.width + self.mouse-x - self.pressed-x);
+                    root.height = max(root.min-height, root.height + self.mouse-y - self.pressed-y);
+                    root.window-resized();
+                }
+            }
+
+            Rectangle {
+                background: #00ff88;
+                border-radius: 2px;
+            }
+        }
+
+        // Bottom-left resize handle
+        TouchArea {
+            width: 16px;
+            height: 16px;
+            x: 0px;
+            y: parent.height - 16px;
+            mouse-cursor: nesw-resize;
+
+            moved => {
+                if (self.pressed) {
+                    let delta-x = self.mouse-x - self.pressed-x;
+                    let new-width = max(root.min-width, root.width - delta-x);
+                    if (new-width > root.min-width) {
+                        root.x += delta-x;
+                        root.width = new-width;
+                    }
+                    root.height = max(root.min-height, root.height + self.mouse-y - self.pressed-y);
+                    root.window-resized();
+                }
+            }
+
+            Rectangle {
+                background: #00ff88;
+                border-radius: 2px;
+            }
+        }
+
+        // Top-right resize handle
+        TouchArea {
+            width: 16px;
+            height: 16px;
+            x: parent.width - 16px;
+            y: 0px;
+            mouse-cursor: nesw-resize;
+
+            moved => {
+                if (self.pressed) {
+                    let delta-y = self.mouse-y - self.pressed-y;
+                    let new-height = max(root.min-height, root.height - delta-y);
+                    if (new-height > root.min-height) {
+                        root.y += delta-y;
+                        root.height = new-height;
+                    }
+                    root.width = max(root.min-width, root.width + self.mouse-x - self.pressed-x);
+                    root.window-resized();
+                }
+            }
+
+            Rectangle {
+                background: #00ff88;
+                border-radius: 2px;
+            }
+        }
+
+        // Top-left resize handle
+        TouchArea {
+            width: 16px;
+            height: 16px;
+            x: 0px;
+            y: 0px;
+            mouse-cursor: nwse-resize;
+
+            moved => {
+                if (self.pressed) {
+                    let delta-x = self.mouse-x - self.pressed-x;
+                    let delta-y = self.mouse-y - self.pressed-y;
+                    let new-width = max(root.min-width, root.width - delta-x);
+                    let new-height = max(root.min-height, root.height - delta-y);
+                    if (new-width > root.min-width) {
+                        root.x += delta-x;
+                        root.width = new-width;
+                    }
+                    if (new-height > root.min-height) {
+                        root.y += delta-y;
+                        root.height = new-height;
+                    }
+                    root.window-resized();
+                }
+            }
+
+            Rectangle {
+                background: #00ff88;
+                border-radius: 2px;
             }
         }
     }

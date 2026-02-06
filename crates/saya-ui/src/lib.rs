@@ -149,6 +149,33 @@ fn run_slint_ui(
         });
     }
 
+    // Window resize handler
+    {
+        let ocr_weak = ocr_window.as_weak();
+        let tx = ui_to_app_tx.clone();
+
+        ocr_window.on_window_resized(move || {
+            if let Some(win) = ocr_weak.upgrade() {
+                let pos = win.window().position();
+                let size = win.window().size();
+
+                let controls_top = 40;
+                let controls_height = 40 + 40;
+                let green_height = size.height.saturating_sub(controls_height);
+
+                let region = CaptureRegion {
+                    x: pos.x,
+                    y: pos.y + controls_top,
+                    width: size.width,
+                    height: green_height,
+                };
+
+                tracing::debug!("[SLINT] Window resized, updating region: {:?}", region);
+                let _ = tx.send(AppEvent::UpdateCaptureRegion(region));
+            }
+        });
+    }
+
     // Auto mode toggle handler
     {
         let ocr_weak = ocr_window.as_weak();
