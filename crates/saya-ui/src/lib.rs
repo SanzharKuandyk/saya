@@ -127,7 +127,6 @@ fn run_slint_ui(
                 win.set_is_capturing(true);
                 win.set_status("".into());
 
-                // Get window position/size in logical coordinates
                 let pos = win.window().position();
                 let size = win.window().size();
 
@@ -143,27 +142,21 @@ fn run_slint_ui(
                     None
                 };
 
-                // Account for DPI scaling - convert logical to physical pixels
-                let scale = win.window().scale_factor();
-                let physical_x = (pos.x as f32 * scale) as i32;
-                let physical_y = ((pos.y + controls_top) as f32 * scale) as i32;
-                let physical_width = (size.width as f32 * scale) as u32;
-                let physical_height = (green_height as f32 * scale) as u32;
-
                 tracing::info!(
-                    "[SLINT] Logical: {}x{} at ({}, {}), Scale: {:.2}, Physical: {}x{} at ({}, {}), Window: {:?}",
-                    size.width, green_height, pos.x, pos.y + controls_top,
-                    scale,
-                    physical_width, physical_height, physical_x, physical_y,
+                    "[SLINT] Capturing green zone: {}x{} at ({}, {}), window: {:?}",
+                    size.width,
+                    green_height,
+                    pos.x,
+                    pos.y + controls_top,
                     window_id
                 );
 
-                // Send with region in physical pixels for screen capture
+                // Always send with region (green zone coordinates)
                 let region = CaptureRegion {
-                    x: physical_x,
-                    y: physical_y,
-                    width: physical_width,
-                    height: physical_height,
+                    x: pos.x,
+                    y: pos.y + controls_top,
+                    width: size.width,
+                    height: green_height,
                 };
 
                 let _ = send_capture_region(region, tx.clone(), ocr_auto);
