@@ -149,6 +149,26 @@ async fn handle_events(
         AppEvent::ShowTranslation { .. } => {
             // UI-only event, ignore in backend
         }
+        AppEvent::HotkeyOcrTriggered => {
+            tracing::debug!(">>> [EVENT] Hotkey OCR triggered");
+
+            // Get current capture region from state
+            let region = {
+                let region_lock = state.current_capture_region.read().await;
+                region_lock.clone()
+            };
+
+            // Use stored region or fallback to default
+            let region = region.unwrap_or_else(|| saya_types::CaptureRegion {
+                x: 100,
+                y: 100,
+                width: 600,
+                height: 400,
+            });
+
+            // Reuse existing OCR handler
+            handle_ocr_trigger(ocr_ctx, region, false).await?;
+        }
     }
 
     Ok(())

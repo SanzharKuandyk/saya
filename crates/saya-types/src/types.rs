@@ -32,6 +32,7 @@ pub enum AppEvent {
         from_lang: String,
         to_lang: String,
     },
+    HotkeyOcrTriggered,
 }
 
 #[derive(Debug, Clone)]
