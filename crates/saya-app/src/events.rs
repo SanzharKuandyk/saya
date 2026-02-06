@@ -26,18 +26,9 @@ pub async fn event_loop(
     state: Arc<AppState>,
     ui_to_app_rx: AsyncReceiver<AppEvent>,
     app_to_ui_tx: AsyncSender<AppEvent>,
+    processor: Arc<JapaneseProcessor>,
+    translator: Arc<Option<JapaneseTranslator>>,
 ) -> anyhow::Result<()> {
-    // Initialize processor with dictionary config
-    let processor = {
-        let config = state.config.read().await;
-        if config.dictionary.enabled {
-            JapaneseProcessor::with_additional_dicts(&config.dictionary.additional_paths)
-        } else {
-            tracing::warn!("Dictionary disabled, using empty processor");
-            JapaneseProcessor::with_additional_dicts(&[])
-        }
-    };
-
     // Initialize Anki client
     let anki_client = {
         let config = state.config.read().await;
@@ -48,22 +39,7 @@ pub async fn event_loop(
         }
     };
 
-    // Initialize translator
-    let translator = {
-        let config = state.config.read().await;
-        if config.translator.enabled && !config.translator.api_key.is_empty() {
-            Some(JapaneseTranslator::new(
-                config.translator.api_key.clone(),
-                config.translator.api_url.clone(),
-            ))
-        } else {
-            None
-        }
-    };
-
     tracing::info!("[EVENT_LOOP] Starting main loop, waiting for events");
-    let processor = Arc::new(processor);
-    let translator = Arc::new(translator);
 
     // Create OcrContext once for all OCR operations
     let ocr_ctx = OcrContext::new(

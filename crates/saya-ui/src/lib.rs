@@ -6,7 +6,9 @@ use saya_config::Config;
 use saya_types::{AppEvent, CaptureRegion, DisplayResult};
 use tokio::sync::RwLock;
 
+pub mod bridge;
 pub mod events;
+pub mod state;
 
 slint::include_modules!();
 
