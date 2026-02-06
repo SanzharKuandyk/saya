@@ -6,7 +6,7 @@ fn default_enabled() -> bool {
 }
 
 fn default_auto() -> bool {
-    false
+    true
 }
 
 fn default_language() -> String {

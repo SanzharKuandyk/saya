@@ -96,9 +96,19 @@ pub async fn run(state: Arc<AppState>, shutdown: impl Future<Output = ()>) {
             controller.shutdown();
         }
         Some(result) = tasks.join_next() => {
-            if let Err(e) = result {
-                tracing::error!("Task failed: {e}");
-                controller.shutdown();
+            match result {
+                Ok(Ok(_)) => {
+                    tracing::info!("Task exited normally (likely UI closed) - shutting down");
+                    controller.shutdown();
+                }
+                Ok(Err(e)) => {
+                    tracing::error!("Task failed: {e}");
+                    controller.shutdown();
+                }
+                Err(e) => {
+                    tracing::error!("Task panicked: {e}");
+                    controller.shutdown();
+                }
             }
         }
     }
