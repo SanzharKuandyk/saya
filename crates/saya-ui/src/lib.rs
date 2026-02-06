@@ -252,6 +252,17 @@ fn run_slint_ui(
 
     let results_store = Arc::new(Mutex::new(Vec::<DisplayResult>::new()));
 
+    // Show config overlay handler
+    {
+        let window_weak_clone = window_weak.clone();
+        window.on_show_config(move || {
+            if let Some(win) = window_weak_clone.upgrade() {
+                win.set_config_visible(true);
+                tracing::info!("[SLINT] Config overlay opened");
+            }
+        });
+    }
+
     {
         let results_clone = results_store.clone();
         let tx = ui_to_app_tx.clone();

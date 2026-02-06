@@ -1,4 +1,5 @@
 import { VerticalBox, HorizontalBox, ScrollView, Button } from "std-widgets.slint";
+import { ConfigPanel } from "components/config.slint";
 
 export struct DictResult {
     term: string,
@@ -24,79 +25,134 @@ export component OverlayWindow inherits Window {
     in-out property <string> hooked-text: "";
     in-out property <string> text-source: "";
     in-out property <string> translation: "";
+    in-out property <bool> config-visible: false;
     callback add-to-anki(int);
+    callback show-config();
 
-    preferred-width: 600px;
-    preferred-height: 500px;
+    // Dynamic sizing based on content
+    min-width: 400px;
+    max-width: 800px;
+    min-height: 200px;
+    max-height: 900px;
 
-    background: #1e1e1ee6;
+    // Glassmorphic background
+    background: #0f0f0fF0;
 
     VerticalBox {
         padding: 16px;
-        spacing: 12px;
+        spacing: 16px;
 
-        // Top block: hooked text display
-        if hooked-text != "": Rectangle {
-            background: #2a2a2a;
-            border-radius: 8px;
-            vertical-stretch: 0;
-            height: self.preferred-height;
+        // Settings button in top-right corner
+        Rectangle {
+            height: 32px;
 
-            VerticalBox {
-                padding: 12px;
-                spacing: 4px;
+            HorizontalBox {
+                padding: 0px;
+                spacing: 0px;
 
-                HorizontalBox {
-                    height: 16px;
-                    spacing: 8px;
-                    vertical-stretch: 0;
+                Rectangle {
+                    horizontal-stretch: 1;  // Push button to right
+                }
+
+                // Settings button
+                TouchArea {
+                    width: 32px;
+                    height: 32px;
+                    clicked => { root.show-config(); }
 
                     Rectangle {
-                        width: 8px;
-                        height: 8px;
-                        border-radius: 4px;
+                        background: #2a2a2a;
+                        border-radius: 6px;
+                        border-width: 1px;
+                        border-color: #00ff88;
+
+                        Text {
+                            text: "⚙";  // Gear emoji
+                            font-size: 20px;
+                            color: #00ff88;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Top Section: Hooked Text Display (if exists)
+        if hooked-text != "": Rectangle {
+            background: #1a1a1aF5;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #333333;
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
+            drop-shadow-offset-y: 4px;
+
+            VerticalBox {
+                padding: 20px;
+                spacing: 12px;
+
+                // Source badge
+                HorizontalBox {
+                    height: 20px;
+                    spacing: 8px;
+
+                    Rectangle {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 5px;
                         background: text-source == "OCR" ? #ff6b6b :
                                    text-source == "Clipboard" ? #4ecdc4 :
                                    text-source == "WebSocket" ? #a29bfe :
                                    #95a5a6;
+                        drop-shadow-blur: 4px;
+                        drop-shadow-color: text-source == "OCR" ? #ff6b6b66 :
+                                          text-source == "Clipboard" ? #4ecdc466 :
+                                          text-source == "WebSocket" ? #a29bfe66 :
+                                          #95a5a666;
                     }
 
                     Text {
                         text: text-source;
-                        font-size: 11px;
-                        color: #808080;
+                        font-size: 12px;
+                        color: #b0b0b0;
                         font-weight: 600;
+                        letter-spacing: 0.5px;
                     }
                 }
 
+                // Main hooked text - large, prominent
                 Text {
                     text: hooked-text;
-                    font-size: 22px;
+                    font-size: 28px;
                     color: #ffffff;
+                    font-weight: 600;
                     wrap: word-wrap;
                     horizontal-alignment: left;
                 }
 
+                // Translation (if exists)
                 if translation != "": Rectangle {
-                    background: #1a3a2a;
-                    border-radius: 4px;
-                    vertical-stretch: 0;
-                    height: self.preferred-height;
+                    background: #0d2a1eCC;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #00ff8833;
 
                     HorizontalBox {
-                        padding: 8px;
-                        spacing: 6px;
+                        padding: 12px;
+                        spacing: 10px;
 
                         Text {
                             text: "→";
-                            font-size: 14px;
-                            color: #4ecdc4;
+                            font-size: 18px;
+                            color: #00ff88;
+                            vertical-alignment: center;
                         }
 
                         Text {
                             text: translation;
-                            font-size: 14px;
-                            color: #a0d0c0;
+                            font-size: 16px;
+                            color: #c0f0d0;
                             wrap: word-wrap;
                         }
                     }
@@ -104,82 +160,221 @@ export component OverlayWindow inherits Window {
             }
         }
 
-        // Bottom block: dictionary results
-        ScrollView {
+        // Dictionary Results Section
+        if results.length > 0: ScrollView {
             vertical-stretch: 1;
 
             VerticalBox {
-                spacing: 8px;
+                spacing: 12px;
+                padding: 4px;
 
                 for result[idx] in results: Rectangle {
-                    background: #2d2d2d;
-                    border-radius: 8px;
+                    background: #1a1a1aF5;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: #333333;
+                    drop-shadow-blur: 12px;
+                    drop-shadow-color: #00000044;
+                    drop-shadow-offset-y: 2px;
 
                     VerticalBox {
-                        padding: 12px;
-                        spacing: 6px;
+                        padding: 20px;
+                        spacing: 12px;
 
+                        // Header: Term + Anki Button
                         HorizontalBox {
+                            spacing: 12px;
+
                             Text {
                                 text: result.term;
-                                font-size: 20px;
+                                font-size: 24px;
                                 color: #ffffff;
                                 font-weight: 700;
+                                horizontal-stretch: 1;
                             }
 
                             Button {
                                 text: "+ Anki";
+                                primary: true;
                                 clicked => {
                                     root.add-to-anki(idx);
                                 }
                             }
                         }
 
-                        Text {
+                        // Reading (pronunciation)
+                        if result.reading != "": Text {
                             text: result.reading;
-                            font-size: 14px;
-                            color: #a0a0a0;
-                        }
-
-                        // Metadata row (frequency, pitch, JLPT)
-                        if result.frequency != "" || result.pitch_accent != "" || result.jlpt_level != "": HorizontalBox {
-                            spacing: 8px;
-
-                            if result.frequency != "": Text {
-                                text: result.frequency;
-                                font-size: 12px;
-                                color: #ffd700;
-                            }
-
-                            if result.pitch_accent != "": Text {
-                                text: result.pitch_accent;
-                                font-size: 12px;
-                                color: #87ceeb;
-                            }
-
-                            if result.jlpt_level != "": Text {
-                                text: result.jlpt_level;
-                                font-size: 12px;
-                                color: #98fb98;
-                            }
-                        }
-
-                        // Conjugation info
-                        if result.conjugation != "": Text {
-                            text: result.conjugation;
-                            font-size: 11px;
+                            font-size: 16px;
                             color: #b0b0b0;
                             font-italic: true;
                         }
 
+                        // Metadata Pills (frequency, pitch, JLPT)
+                        if result.frequency != "" || result.pitch_accent != "" || result.jlpt_level != "": HorizontalBox {
+                            spacing: 8px;
+
+                            if result.frequency != "": Rectangle {
+                                background: #ffd70022;
+                                border-radius: 12px;
+                                border-width: 1px;
+                                border-color: #ffd70044;
+                                height: 24px;
+
+                                HorizontalBox {
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    alignment: center;
+
+                                    Text {
+                                        text: result.frequency;
+                                        font-size: 12px;
+                                        color: #ffd700;
+                                        font-weight: 600;
+                                    }
+                                }
+                            }
+
+                            if result.pitch_accent != "": Rectangle {
+                                background: #87ceeb22;
+                                border-radius: 12px;
+                                border-width: 1px;
+                                border-color: #87ceeb44;
+                                height: 24px;
+
+                                HorizontalBox {
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    alignment: center;
+
+                                    Text {
+                                        text: result.pitch_accent;
+                                        font-size: 12px;
+                                        color: #87ceeb;
+                                        font-weight: 600;
+                                    }
+                                }
+                            }
+
+                            if result.jlpt_level != "": Rectangle {
+                                background: #98fb9822;
+                                border-radius: 12px;
+                                border-width: 1px;
+                                border-color: #98fb9844;
+                                height: 24px;
+
+                                HorizontalBox {
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    alignment: center;
+
+                                    Text {
+                                        text: result.jlpt_level;
+                                        font-size: 12px;
+                                        color: #98fb98;
+                                        font-weight: 600;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Conjugation info
+                        if result.conjugation != "": Rectangle {
+                            background: #24242488;
+                            border-radius: 6px;
+
+                            HorizontalBox {
+                                padding: 8px;
+
+                                Text {
+                                    text: result.conjugation;
+                                    font-size: 13px;
+                                    color: #b0b0b0;
+                                    font-italic: true;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+
+                        // Divider
+                        Rectangle {
+                            height: 1px;
+                            background: #333333;
+                        }
+
+                        // Definition - most important, give it space
                         Text {
                             text: result.definition;
-                            font-size: 14px;
+                            font-size: 16px;
                             color: #e0e0e0;
                             wrap: word-wrap;
                         }
                     }
                 }
+            }
+        }
+
+        // Empty state (when no results)
+        if results.length == 0 && hooked-text == "": Rectangle {
+            background: transparent;
+            vertical-stretch: 1;
+
+            VerticalBox {
+                alignment: center;
+                spacing: 16px;
+
+                Text {
+                    text: "No results yet";
+                    font-size: 18px;
+                    color: #606060;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Capture text or use OCR to see results";
+                    font-size: 14px;
+                    color: #404040;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+
+    // Config overlay (modal on top of everything)
+    if config-visible: Rectangle {
+        // Full-screen overlay backdrop
+        background: #000000CC;
+        z: 100;
+        width: root.width;
+        height: root.height;
+
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.config-visible = false; }  // Close on backdrop click
+        }
+
+        // Centered config panel
+        Rectangle {
+            width: 700px;
+            height: 600px;
+            background: #0f0f0fF5;
+            border-radius: 12px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: #00000088;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                // Stop clicks from closing the config when clicking inside panel
+            }
+
+            ConfigPanel {
+                width: parent.width;
+                height: parent.height;
+                close-panel => { root.config-visible = false; }
             }
         }
     }
