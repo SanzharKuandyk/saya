@@ -149,6 +149,39 @@ fn run_slint_ui(
         });
     }
 
+    // Auto mode toggle handler
+    {
+        let ocr_weak = ocr_window.as_weak();
+        let tx = ui_to_app_tx.clone();
+
+        ocr_window.on_toggle_auto_mode(move || {
+            if let Some(win) = ocr_weak.upgrade() {
+                let new_mode = !win.get_auto_capturing_mode();
+                win.set_auto_capturing_mode(new_mode);
+                tracing::info!("[SLINT] Auto mode toggled to: {}", new_mode);
+
+                // If enabling auto mode, trigger auto OCR with current region
+                if new_mode {
+                    let pos = win.window().position();
+                    let size = win.window().size();
+
+                    let controls_top = 40;
+                    let controls_height = 40 + 40;
+                    let green_height = size.height.saturating_sub(controls_height);
+
+                    let region = CaptureRegion {
+                        x: pos.x,
+                        y: pos.y + controls_top,
+                        width: size.width,
+                        height: green_height,
+                    };
+
+                    let _ = tx.send(AppEvent::TriggerAutoOcr(region));
+                }
+            }
+        });
+    }
+
     {
         let tx = ui_to_app_tx.clone();
         let ocr_weak = ocr_window.as_weak();
