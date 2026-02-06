@@ -17,6 +17,9 @@ export component OcrWindow inherits Window {
     in-out property<bool> auto-capturing-mode: false;
     in-out property<[string]> window-list: [];
     in-out property<int> selected-window-index: -1;
+    in-out property<color> border-ready-color: #00ff88;
+    in-out property<color> border-capturing-color: #ff4444;
+    in-out property<color> border-preparing-color: #ffaa00;
 
     function button_text() -> string {
         if (!is-ready) {
@@ -43,12 +46,12 @@ export component OcrWindow inherits Window {
     Rectangle {
         background: transparent;
         border-width: 3px;
-        border-color: is-capturing ? #ff4444 : is-ready ? #00ff88 : #ffaa00;
+        border-color: is-capturing ? border-capturing-color : is-ready ? border-ready-color : border-preparing-color;
         border-radius: 8px;
 
         // Glow effect for better visibility
         drop-shadow-blur: 8px;
-        drop-shadow-color: is-capturing ? #ff444444 : is-ready ? #00ff8844 : #ffaa0044;
+        drop-shadow-color: is-capturing ? border-capturing-color.with-alpha(0.27) : is-ready ? border-ready-color.with-alpha(0.27) : border-preparing-color.with-alpha(0.27);
         drop-shadow-offset-x: 0px;
         drop-shadow-offset-y: 0px;
 

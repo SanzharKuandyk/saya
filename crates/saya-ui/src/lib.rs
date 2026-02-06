@@ -12,6 +12,32 @@ pub mod state;
 
 slint::include_modules!();
 
+/// Parse a hex color string (#RRGGBB or #RRGGBBAA) into a Slint Color
+fn parse_color(hex: &str) -> Result<slint::Color, String> {
+    let hex = hex.trim_start_matches('#');
+
+    let (r, g, b, a) = match hex.len() {
+        6 => {
+            // #RRGGBB format
+            let r = u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())?;
+            let g = u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())?;
+            let b = u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())?;
+            (r, g, b, 255u8)
+        }
+        8 => {
+            // #RRGGBBAA format
+            let r = u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())?;
+            let g = u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())?;
+            let b = u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())?;
+            let a = u8::from_str_radix(&hex[6..8], 16).map_err(|e| e.to_string())?;
+            (r, g, b, a)
+        }
+        _ => return Err(format!("Invalid color format: #{}", hex)),
+    };
+
+    Ok(slint::Color::from_argb_u8(a, r, g, b))
+}
+
 pub async fn ui_loop(
     app_to_ui_rx: AsyncReceiver<AppEvent>,
     ui_to_app_tx: AsyncSender<AppEvent>,
@@ -76,6 +102,17 @@ fn run_slint_ui(
     let ocr_auto = config.ocr.auto;
 
     ocr_window.set_auto_capturing_mode(ocr_auto);
+
+    // Set border colors from config
+    if let Ok(color) = parse_color(&config.ocr.border_ready_color) {
+        ocr_window.set_border_ready_color(color);
+    }
+    if let Ok(color) = parse_color(&config.ocr.border_capturing_color) {
+        ocr_window.set_border_capturing_color(color);
+    }
+    if let Ok(color) = parse_color(&config.ocr.border_preparing_color) {
+        ocr_window.set_border_preparing_color(color);
+    }
 
     tracing::debug!("[SLINT] UI windows created");
 
