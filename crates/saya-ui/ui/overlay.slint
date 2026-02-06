@@ -26,8 +26,11 @@ export component OverlayWindow inherits Window {
     in-out property <string> text-source: "";
     in-out property <string> translation: "";
     in-out property <bool> config-visible: false;
+    in-out property <bool> ocr-auto-mode: false;
     callback add-to-anki(int);
     callback show-config();
+    callback toggle-ocr-auto();
+    callback trigger-ocr-capture();
 
     // Dynamic sizing based on content
     min-width: 400px;
@@ -42,34 +45,108 @@ export component OverlayWindow inherits Window {
         padding: 16px;
         spacing: 16px;
 
-        // Settings button in top-right corner
+        // Header control bar
         Rectangle {
-            height: 32px;
+            height: 48px;
+            background: #1a1a1aF5;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: #333333;
 
             HorizontalBox {
-                padding: 0px;
-                spacing: 0px;
-
-                Rectangle {
-                    horizontal-stretch: 1;  // Push button to right
-                }
+                padding: 12px;
+                spacing: 16px;
+                alignment: center;
 
                 // Settings button
                 TouchArea {
-                    width: 32px;
+                    width: 100px;
                     height: 32px;
                     clicked => { root.show-config(); }
 
                     Rectangle {
                         background: #2a2a2a;
                         border-radius: 6px;
-                        border-width: 1px;
+                        border-width: 2px;
                         border-color: #00ff88;
 
+                        HorizontalBox {
+                            padding: 8px;
+                            spacing: 6px;
+                            alignment: center;
+
+                            Text {
+                                text: "⚙";
+                                font-size: 16px;
+                                color: #00ff88;
+                            }
+
+                            Text {
+                                text: "Settings";
+                                font-size: 13px;
+                                color: #00ff88;
+                                font-weight: 600;
+                            }
+                        }
+                    }
+                }
+
+                // Divider
+                Rectangle {
+                    width: 2px;
+                    height: 24px;
+                    background: #444444;
+                }
+
+                // OCR Label
+                Text {
+                    text: "OCR:";
+                    font-size: 14px;
+                    color: #b0b0b0;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+
+                // AUTO/MANUAL toggle (improved visibility)
+                TouchArea {
+                    width: 80px;
+                    height: 32px;
+                    clicked => { root.toggle-ocr-auto(); }
+
+                    Rectangle {
+                        background: ocr-auto-mode ? #00ff8844 : #44444444;
+                        border-radius: 16px;
+                        border-width: 2px;
+                        border-color: ocr-auto-mode ? #00ff88 : #888888;
+
                         Text {
-                            text: "⚙";  // Gear emoji
-                            font-size: 20px;
-                            color: #00ff88;
+                            text: ocr-auto-mode ? "AUTO" : "MANUAL";
+                            font-size: 11px;
+                            font-weight: 800;
+                            color: ocr-auto-mode ? #ffffff : #cccccc;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Capture / Stop button
+                TouchArea {
+                    width: 110px;
+                    height: 32px;
+                    clicked => { root.trigger-ocr-capture(); }
+
+                    Rectangle {
+                        background: ocr-auto-mode ? #ff444444 : #00ff8844;
+                        border-radius: 6px;
+                        border-width: 2px;
+                        border-color: ocr-auto-mode ? #ff4444 : #00ff88;
+
+                        Text {
+                            text: ocr-auto-mode ? "Stop Auto" : "Capture Now";
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: #ffffff;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                         }

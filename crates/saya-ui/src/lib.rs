@@ -102,6 +102,7 @@ fn run_slint_ui(
     let ocr_auto = config.ocr.auto;
 
     ocr_window.set_auto_capturing_mode(ocr_auto);
+    window.set_ocr_auto_mode(ocr_auto);
 
     // Set border colors from config
     if let Ok(color) = parse_color(&config.ocr.border_ready_color) {
@@ -134,15 +135,14 @@ fn run_slint_ui(
                         let pos = win.window().position();
                         let size = win.window().size();
 
-                        let controls_top = 40;
-                        let controls_height = 40 + 40;
-                        let green_height = size.height.saturating_sub(controls_height);
+                        let header_height = 32i32;
+                        let capture_height = size.height.saturating_sub(32);
 
                         let region = CaptureRegion {
                             x: pos.x,
-                            y: pos.y + controls_top,
+                            y: pos.y + header_height,
                             width: size.width,
-                            height: green_height,
+                            height: capture_height,
                         };
 
                         let _ = tx.send(AppEvent::UpdateCaptureRegion(region));
@@ -186,6 +186,18 @@ fn run_slint_ui(
         });
     }
 
+    // Window close handler
+    {
+        let ocr_weak = ocr_window.as_weak();
+
+        ocr_window.on_window_closed(move || {
+            if let Some(win) = ocr_weak.upgrade() {
+                win.window().hide().ok();
+                tracing::info!("[SLINT] OCR window closed");
+            }
+        });
+    }
+
     // Window resize handler
     {
         let ocr_weak = ocr_window.as_weak();
@@ -196,15 +208,14 @@ fn run_slint_ui(
                 let pos = win.window().position();
                 let size = win.window().size();
 
-                let controls_top = 40;
-                let controls_height = 40 + 40;
-                let green_height = size.height.saturating_sub(controls_height);
+                let header_height = 32i32;
+                let capture_height = size.height.saturating_sub(32);
 
                 let region = CaptureRegion {
                     x: pos.x,
-                    y: pos.y + controls_top,
+                    y: pos.y + header_height,
                     width: size.width,
-                    height: green_height,
+                    height: capture_height,
                 };
 
                 tracing::debug!("[SLINT] Window resized, updating region: {:?}", region);
@@ -213,34 +224,91 @@ fn run_slint_ui(
         });
     }
 
-    // Auto mode toggle handler
+    // OCR auto mode toggle (from main window)
     {
+        let window_weak_clone = window_weak.clone();
+        let ocr_weak = ocr_window.as_weak();
+        let tx = ui_to_app_tx.clone();
+        let toggling = std::rc::Rc::new(std::cell::Cell::new(false));
+
+        window.on_toggle_ocr_auto(move || {
+            // Prevent rapid clicking
+            if toggling.get() {
+                return;
+            }
+            toggling.set(true);
+
+            if let Some(win) = window_weak_clone.upgrade() {
+                let new_mode = !win.get_ocr_auto_mode();
+                win.set_ocr_auto_mode(new_mode);
+                tracing::info!("[SLINT] Auto mode toggled to: {}", new_mode);
+
+                // Sync to OCR window
+                if let Some(ocr_win) = ocr_weak.upgrade() {
+                    ocr_win.set_auto_capturing_mode(new_mode);
+
+                    // If enabling auto mode, trigger auto OCR with current region
+                    if new_mode {
+                        let pos = ocr_win.window().position();
+                        let size = ocr_win.window().size();
+
+                        let header_height = 32i32;
+                        let capture_height = size.height.saturating_sub(32);
+
+                        let region = CaptureRegion {
+                            x: pos.x,
+                            y: pos.y + header_height,
+                            width: size.width,
+                            height: capture_height,
+                        };
+
+                        let _ = tx.send(AppEvent::TriggerAutoOcr(region));
+                    }
+                }
+            }
+
+            // Reset toggle flag after a short delay
+            let toggling_clone = toggling.clone();
+            slint::Timer::single_shot(std::time::Duration::from_millis(100), move || {
+                toggling_clone.set(false);
+            });
+        });
+    }
+
+    // OCR capture/stop button (from main window)
+    {
+        let window_weak_clone = window_weak.clone();
         let ocr_weak = ocr_window.as_weak();
         let tx = ui_to_app_tx.clone();
 
-        ocr_window.on_toggle_auto_mode(move || {
-            if let Some(win) = ocr_weak.upgrade() {
-                let new_mode = !win.get_auto_capturing_mode();
-                win.set_auto_capturing_mode(new_mode);
-                tracing::info!("[SLINT] Auto mode toggled to: {}", new_mode);
+        window.on_trigger_ocr_capture(move || {
+            if let Some(win) = window_weak_clone.upgrade() {
+                if win.get_ocr_auto_mode() {
+                    // Stop auto mode
+                    win.set_ocr_auto_mode(false);
+                    if let Some(ocr_win) = ocr_weak.upgrade() {
+                        ocr_win.set_auto_capturing_mode(false);
+                    }
+                    tracing::info!("[SLINT] Auto mode stopped");
+                } else {
+                    // Trigger single capture
+                    if let Some(ocr_win) = ocr_weak.upgrade() {
+                        let pos = ocr_win.window().position();
+                        let size = ocr_win.window().size();
 
-                // If enabling auto mode, trigger auto OCR with current region
-                if new_mode {
-                    let pos = win.window().position();
-                    let size = win.window().size();
+                        let header_height = 32i32;
+                        let capture_height = size.height.saturating_sub(32);
 
-                    let controls_top = 40;
-                    let controls_height = 40 + 40;
-                    let green_height = size.height.saturating_sub(controls_height);
+                        let region = CaptureRegion {
+                            x: pos.x,
+                            y: pos.y + header_height,
+                            width: size.width,
+                            height: capture_height,
+                        };
 
-                    let region = CaptureRegion {
-                        x: pos.x,
-                        y: pos.y + controls_top,
-                        width: size.width,
-                        height: green_height,
-                    };
-
-                    let _ = tx.send(AppEvent::TriggerAutoOcr(region));
+                        tracing::info!("[SLINT] Manual capture triggered");
+                        let _ = tx.send(AppEvent::TriggerOcr(region));
+                    }
                 }
             }
         });
@@ -261,10 +329,9 @@ fn run_slint_ui(
                 let pos = win.window().position();
                 let size = win.window().size();
 
-                // Calculate green zone (exclude top 32px + bottom button ~36px)
-                let controls_top = 40;
-                let controls_height = 40 + 40;
-                let green_height = size.height.saturating_sub(controls_height);
+                // Calculate capture zone (exclude header 32px)
+                let header_height = 32i32;
+                let capture_height = size.height.saturating_sub(32);
 
                 let selected_idx = win.get_selected_window_index();
                 let window_id = if selected_idx >= 0 {
@@ -274,20 +341,20 @@ fn run_slint_ui(
                 };
 
                 tracing::info!(
-                    "[SLINT] Capturing green zone: {}x{} at ({}, {}), window: {:?}",
+                    "[SLINT] Capturing region: {}x{} at ({}, {}), window: {:?}",
                     size.width,
-                    green_height,
+                    capture_height,
                     pos.x,
-                    pos.y + controls_top,
+                    pos.y + header_height,
                     window_id
                 );
 
-                // Always send with region (green zone coordinates)
+                // Always send with region coordinates
                 let region = CaptureRegion {
                     x: pos.x,
-                    y: pos.y + controls_top,
+                    y: pos.y + header_height,
                     width: size.width,
-                    height: green_height,
+                    height: capture_height,
                 };
 
                 let _ = send_capture_region(region, tx.clone(), ocr_auto);
