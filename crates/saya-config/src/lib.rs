@@ -16,10 +16,6 @@ fn default_watchdog_timeout_ms() -> u64 {
     10000
 }
 
-fn default_delta_time() -> u64 {
-    100
-}
-
 fn default_hotkey_poll_interval_ms() -> u64 {
     50
 }

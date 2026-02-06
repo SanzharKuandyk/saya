@@ -100,7 +100,7 @@ async fn handle_events(
     event: AppEvent,
     app_to_ui_tx: &AsyncSender<AppEvent>,
     processor: &Arc<JapaneseProcessor>,
-    translator: &Arc<Option<JapaneseTranslator>>,
+    _translator: &Arc<Option<JapaneseTranslator>>,
     anki_client: Option<&AnkiConnectClient>,
     ocr_ctx: &OcrContext,
 ) -> anyhow::Result<()> {
