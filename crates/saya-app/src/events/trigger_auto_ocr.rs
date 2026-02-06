@@ -28,8 +28,17 @@ pub fn start_auto_ocr_loop(ctx: &OcrContext, region: CaptureRegion) {
                 break;
             }
 
-            // Run one OCR cycle
-            let _ = handle_ocr_trigger(&ctx_clone, region, true).await;
+            // Read current region from state (updated when UI window moves)
+            let current_region = {
+                let region_lock = ctx_clone.state.current_capture_region.read().await;
+                region_lock.clone()
+            };
+
+            // Use current region if available, otherwise fallback to initial
+            let active_region = current_region.unwrap_or(region);
+
+            // Run one OCR cycle with fresh region
+            let _ = handle_ocr_trigger(&ctx_clone, active_region, true).await;
 
             tokio::task::yield_now().await;
             tokio::time::sleep(std::time::Duration::from_millis(interval_ms)).await;

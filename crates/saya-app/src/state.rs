@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use saya_config::Config;
+use saya_types::CaptureRegion;
 use tokio::sync::RwLock;
 use windows::Media::Ocr::OcrEngine as WinOcrEngine;
 
@@ -12,6 +13,7 @@ pub struct AppState {
     pub ocr_engine: WinOcrEngine,
     pub auto_ocr_running: AtomicBool,
     pub status: AppStatus,
+    pub current_capture_region: Arc<RwLock<Option<CaptureRegion>>>,
 }
 
 impl AppState {
@@ -26,6 +28,7 @@ impl AppState {
             ocr_engine,
             auto_ocr_running: AtomicBool::new(false),
             status: AppStatus::new(),
+            current_capture_region: Arc::new(RwLock::new(None)),
         }
     }
 }

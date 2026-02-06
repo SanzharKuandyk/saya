@@ -112,10 +112,22 @@ async fn handle_events(
         AppEvent::TriggerOcr(region) => {
             tracing::debug!(">>> [OCR] Triggered");
 
+            // Store current region for future use
+            *state.current_capture_region.write().await = Some(region);
+
             handle_ocr_trigger(ocr_ctx, region, false).await?;
         }
         AppEvent::TriggerAutoOcr(region) => {
+            // Store initial region for auto OCR
+            *state.current_capture_region.write().await = Some(region);
+
             start_auto_ocr_loop(ocr_ctx, region);
+        }
+        AppEvent::UpdateCaptureRegion(region) => {
+            // Update region while auto OCR is running (window moved/resized)
+            *state.current_capture_region.write().await = Some(region);
+            tracing::debug!(">>> [OCR] Region updated: {}x{} at ({}, {})",
+                region.width, region.height, region.x, region.y);
         }
         AppEvent::CaptureWindow { window_id } => {
             tracing::debug!(">>> [OCR] CaptureWindow: {:?} <<<", window_id);

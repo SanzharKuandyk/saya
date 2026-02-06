@@ -18,6 +18,7 @@ pub enum AppEvent {
     CreateCard(DisplayResult),
     TriggerOcr(CaptureRegion),
     TriggerAutoOcr(CaptureRegion),
+    UpdateCaptureRegion(CaptureRegion),
     CaptureWindow {
         window_id: Option<u32>,
     },

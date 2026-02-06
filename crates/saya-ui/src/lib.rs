@@ -81,6 +81,40 @@ fn run_slint_ui(
 
     let window_ids = std::rc::Rc::new(std::cell::RefCell::new(Vec::<u32>::new()));
 
+    // Timer to update capture region when window moves (for auto OCR)
+    {
+        let ocr_weak = ocr_window.as_weak();
+        let tx = ui_to_app_tx.clone();
+
+        let timer = slint::Timer::default();
+        timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_millis(500),
+            move || {
+                if let Some(win) = ocr_weak.upgrade() {
+                    // Only send updates if auto mode is enabled
+                    if win.get_auto_capturing_mode() {
+                        let pos = win.window().position();
+                        let size = win.window().size();
+
+                        let controls_top = 40;
+                        let controls_height = 40 + 40;
+                        let green_height = size.height.saturating_sub(controls_height);
+
+                        let region = CaptureRegion {
+                            x: pos.x,
+                            y: pos.y + controls_top,
+                            width: size.width,
+                            height: green_height,
+                        };
+
+                        let _ = tx.send(AppEvent::UpdateCaptureRegion(region));
+                    }
+                }
+            },
+        );
+    }
+
     {
         let ocr_weak = ocr_window.as_weak();
         let ids = window_ids.clone();
